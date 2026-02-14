@@ -693,7 +693,7 @@ If the active host tool is not present in either `targets` or `mappings.json`, t
 
 Configuration resolution is the process by which user-supplied values are matched to the config slots declared in the manifest.
 
-### Resolution Order
+### Config Value Resolution Order
 
 When resolving a config variable, the installer MUST use the following precedence order (highest to lowest):
 

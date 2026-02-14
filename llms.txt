@@ -22,9 +22,40 @@ Semantic Versioning, and JSON Schema.
 
 ## Key Concepts
 
-- Self-contained ZIP archives (.ccpkg)
+- Self-contained ZIP archives (.ccpkg) with no post-install steps
 - Declarative manifest.json with typed configuration
 - Universal core + thin tool-specific adapters
-- Lazy loading for fast startup
-- No central registry required
+- Lazy loading for fast startup (metadata only at session start)
+- No central registry required (decentralized JSON registries)
 - No install-time code execution
+- Deterministic lockfiles (ccpkg-lock.json) with SHA-256 checksums
+- Install scope: user (~/.claude/packages/) or project (<project>/.claude/packages/)
+
+## Component Types
+
+Packages may contain any combination of:
+- Skills (SKILL.md, Agent Skills format)
+- Agents (AGENT.md)
+- Commands (slash commands, namespaced as /package-name:command-name)
+- Hooks (event handlers: PreToolUse, PostToolUse, SessionStart, SessionStop)
+- MCP servers (three modes: traditional, embedded mcpb, referenced mcpb)
+- LSP servers
+- Instructions (INSTRUCTIONS.md with tool-specific filename mappings)
+
+## Configuration Model
+
+Manifest declares typed config slots: secret, string, number,
+boolean, enum, path. Values collected at install time. Templates
+(.mcp.json, .lsp.json) use ${config.VARIABLE_NAME} substitution.
+Secrets masked in logs, excluded from lockfiles.
+
+## Cross-Tool Portability
+
+Works across Claude Code, Gemini CLI, Codex, GitHub Copilot, and
+other tools that support MCP, LSP, or Agent Skills. Tool-specific
+differences handled via instructions/mappings.json and the targets
+manifest field.
+
+## Specification Version
+
+Current draft: 2026-02-14. Uses RFC 2119 conventions (MUST, SHOULD, MAY).
