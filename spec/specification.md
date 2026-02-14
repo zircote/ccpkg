@@ -802,6 +802,34 @@ Uninstalling a package reverses the install process:
 3. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
 4. Deregister components from the host.
 
+### Update
+
+Package updates MUST be manual and explicit. The installer MUST NOT automatically update packages or check for updates at session start.
+
+The update process:
+
+1. User invokes update for a specific package or all packages.
+2. Installer resolves the latest version satisfying the manifest's semver range.
+3. If a newer version is available, the installer downloads, verifies, and installs it.
+4. The lockfile is updated with the new pinned version.
+5. Config values are preserved unless the new version introduces new required config slots, in which case the user is prompted.
+
+An installer SHOULD provide an `outdated` command that checks configured registries and reports available updates without applying them.
+
+### Dev Mode (Link)
+
+Installers SHOULD support a dev mode that creates a symbolic link from the packages directory to a local source directory. This allows package authors to iterate on skills, hooks, and commands without re-packing after every change.
+
+The link process:
+
+1. User invokes link with a path to a local package directory.
+2. Installer validates that the directory contains a valid `manifest.json`.
+3. A symbolic link is created at the install location pointing to the local directory.
+4. The lockfile records the package with `"source": "link:{absolute-path}"`.
+5. Components are registered normally. Changes to the linked directory take effect immediately.
+
+Linked packages MUST be distinguishable from installed archives in listings and status output. The `unlink` operation removes the symlink and lockfile entry without deleting the source directory.
+
 ---
 
 ## Lockfile Format
@@ -856,7 +884,7 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `checksum` | `string` | SHA-256 hash of the installed archive. |
 | `installed_at` | `string` | ISO 8601 timestamp of installation. |
 | `scope` | `string` | Install scope (`"user"` or `"project"`). |
-| `source` | `string` | The URL or path from which the package was installed. |
+| `source` | `string` | The URL or path from which the package was installed. Prefixed with `link:` for dev-mode linked packages (e.g., `link:/Users/me/my-plugin`). |
 | `config_hash` | `string` | SHA-256 hash of the resolved config values (excluding secrets). Used to detect config drift. |
 | `components` | `object` | Mirror of the manifest `components` object for quick reference. |
 

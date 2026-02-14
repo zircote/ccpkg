@@ -279,19 +279,39 @@ Node.js/TypeScript for scripts. Claude Code already runs on Node, so there is no
 
 ---
 
-## Open Questions
+## Resolved Design Questions
 
-These are unresolved design points that need input before the specification is finalized.
+These were open questions during the design phase. All have been resolved.
 
-1. **Version ranges vs pinned versions in lockfiles**: Should the lockfile support semver ranges (`^1.2.0`) or only exact versions (`1.2.3`)? Pinned versions are more reproducible. Ranges allow patch updates without manual intervention. lazy.nvim pins to exact commits. npm supports both via `package.json` (ranges) + `package-lock.json` (pinned). We are leaning toward the npm model: manifest declares ranges, lockfile pins exact versions.
+### 1. Version ranges vs pinned versions in lockfiles
 
-2. **Update mechanism**: How should package updates work? Options: (a) manual only (`/ccpkg:update` explicitly), (b) check-on-start with user prompt, (c) auto-update with lockfile bump. Leaning toward manual-only with an optional "check for updates" that reports but does not apply.
+**Decision: Manifest declares semver ranges, lockfile pins exact versions.**
 
-3. **Dev mode**: Should there be a mode that symlinks a local directory instead of installing from an archive? lazy.nvim's `dir` option is the model. This is essential for package authors who want to iterate without re-packing. Leaning yes.
+The npm model: `manifest.json` uses ranges like `^1.2.0` to express compatibility intent. `ccpkg-lock.json` pins to exact resolved versions like `1.2.3`. This gives authors flexibility to express compatibility while users get deterministic, reproducible installs. The lockfile is the source of truth for what's actually installed.
 
-4. **Name conflicts**: How to handle conflicting component names across packages? Options: (a) namespace everything by package name (current approach), (b) error on conflict, (c) last-installed wins. Namespacing is the safest default.
+### 2. Update mechanism
 
-5. **Package signing**: Should the spec define a standard signing mechanism? Options: (a) defer to registries, (b) optional GPG/minisign signatures alongside the archive, (c) not in v1. Leaning toward (b) -- optional, not required, but with a defined location and verification command.
+**Decision: Manual only with optional outdated check.**
+
+`/ccpkg:update` is explicit and user-initiated. A separate `/ccpkg:outdated` command checks configured registries and reports available updates without applying them. No automatic updates, no startup checks. The user is always in control. This avoids the startup latency problem that motivated ccpkg in the first place.
+
+### 3. Dev mode
+
+**Decision: Yes, symlink dev mode via `/ccpkg:link`.**
+
+`/ccpkg:link ./path/to/my-plugin` creates a symlink from the packages directory to a local directory. Changes to the source reflect immediately without re-packing. Modeled after `npm link` and lazy.nvim's `dir` option. Essential for package authors iterating on skills, hooks, and commands. The lockfile records linked packages with a `"source": "link"` field so they are distinguishable from installed archives.
+
+### 4. Name conflicts
+
+**Decision: Namespace everything by package name.**
+
+All components are automatically prefixed by the package name. A skill `review` in package `code-tools` becomes `/code-tools:review`. A hook in `linter-pack` is registered under the `linter-pack` namespace. Conflicts are impossible by design. This matches how Claude Code plugins already namespace commands today.
+
+### 5. Package signing
+
+**Decision: Consistent with mcpb -- checksums in v1, signing deferred.**
+
+The mcpb format has no native signing or checksums, relying on source reputation and manual inspection. ccpkg already improves on this by including a `checksum` field (SHA-256) in the manifest for integrity verification. Formal cryptographic signing (GPG, sigstore, minisign) is deferred to a future spec version. The `checksum` field and `/ccpkg:verify` command provide baseline integrity verification that mcpb lacks, while keeping v1 simple and shippable.
 
 ---
 
