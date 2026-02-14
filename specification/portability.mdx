@@ -1,0 +1,36 @@
+---
+title: "Portability"
+description: "Cross-tool portability via universal standards and thin adapter mappings."
+---
+
+# Cross-Tool Portability
+
+ccpkg achieves cross-tool portability by building on universal open standards and providing thin adapter mappings for tool-specific conventions.
+
+## Universal Components
+
+The following components are tool-agnostic and work across any host that supports the underlying standard:
+
+| Component | Standard |
+|---|---|
+| Skills (`SKILL.md`) | [Agent Skills](https://agentskills.io/specification) |
+| MCP servers (`.mcp.json`) | [Model Context Protocol](https://modelcontextprotocol.io) |
+| LSP servers (`.lsp.json`) | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) |
+| Config schema | [JSON Schema](https://json-schema.org/) |
+
+## Tool-Specific Adapters
+
+The following mechanisms handle tool-specific differences:
+
+1. **Instruction file mapping.** The `instructions/mappings.json` file and `targets.*.instructions_file` manifest field map canonical `INSTRUCTIONS.md` content to tool-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
+
+2. **Targets object.** The `targets` field in `manifest.json` allows authors to declare tool-specific overrides. Each tool adapter defines its own schema for the target value object.
+
+3. **Hooks.** Hook event types and execution semantics are host-specific. Hosts MUST silently ignore unrecognized event types, enabling packages to include hooks for multiple hosts without conflict.
+
+## Portability Guidelines for Authors
+
+- Use `INSTRUCTIONS.md` and `mappings.json` for instructions. Do not hardcode tool-specific filenames.
+- Prefer MCP for tool integration over host-specific mechanisms.
+- Use the `compatibility` field to declare minimum host versions rather than excluding hosts.
+- Test packages across multiple hosts when possible.

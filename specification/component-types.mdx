@@ -1,0 +1,341 @@
+---
+title: "Component Types"
+description: "Skills, agents, commands, hooks, MCP servers, LSP servers, and instructions — formats and requirements."
+---
+
+# Component Types
+
+## Skills
+
+Skills conform to the [Agent Skills specification](https://agentskills.io/specification). Each skill is a directory containing a `SKILL.md` file with YAML frontmatter and Markdown instructions.
+
+**Requirements:**
+
+- Each skill directory declared in `components.skills` MUST contain a `SKILL.md` file.
+- The `SKILL.md` file MUST include valid YAML frontmatter with at least `name` and `description` fields.
+- The skill `name` in frontmatter MUST match the directory name.
+- Skills MAY include `scripts/`, `references/`, and `assets/` subdirectories as defined by the Agent Skills specification.
+
+**Progressive disclosure:**
+
+Skills support three-tier progressive disclosure to minimize context token usage:
+
+1. **Metadata** (~100 tokens): The `name` and `description` from frontmatter, loaded at session startup for all installed skills.
+2. **Instructions** (<5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
+3. **Resources** (as needed): Files in `scripts/`, `references/`, and `assets/`, loaded only when required during execution.
+
+**Example SKILL.md:**
+
+```markdown
+---
+name: openapi-validator
+description: Validates OpenAPI specifications against the OpenAPI 3.x standard. Use when the user wants to check an API spec for errors, warnings, or compliance issues.
+---
+
+# OpenAPI Validator
+
+Validate OpenAPI specification files for correctness and compliance.
+
+## Usage
+
+1. Read the target OpenAPI spec file (YAML or JSON).
+2. Run the validation script:
+   ```
+   scripts/validate.py <spec-file>
+   ```
+3. Report findings grouped by severity (error, warning, info).
+
+## Edge Cases
+
+- If the file is not valid YAML/JSON, report a parse error before validation.
+- Specs using `$ref` to external files should be flagged as unsupported.
+```
+
+## Agents
+
+Agents are specialized personas with defined behavior, context, and capabilities. Each agent is a directory containing an `AGENT.md` file.
+
+**Requirements:**
+
+- Each agent directory declared in `components.agents` MUST contain an `AGENT.md` file.
+- The `AGENT.md` file MUST include valid YAML frontmatter with at least `name` and `description` fields.
+
+**AGENT.md Frontmatter:**
+
+| Field | Required | Constraints | Description |
+|---|---|---|---|
+| `name` | REQUIRED | Same constraints as skill `name`. | The agent identifier. |
+| `description` | REQUIRED | Max 1024 characters. | Describes the agent's role and when to use it. |
+| `license` | OPTIONAL | License name or file reference. | License for the agent. |
+| `metadata` | OPTIONAL | Key-value string mapping. | Additional metadata. |
+
+The Markdown body of `AGENT.md` defines the agent's system instructions, persona, and behavioral guidelines. Hosts load this content when the agent is activated.
+
+**Example AGENT.md:**
+
+```markdown
+---
+name: security-reviewer
+description: A security-focused code review agent that identifies vulnerabilities, insecure patterns, and OWASP Top 10 issues in source code.
+---
+
+# Security Reviewer
+
+You are a security-focused code reviewer. Your role is to identify vulnerabilities, insecure patterns, and potential exploits in source code.
+
+## Behavior
+
+- Analyze code for OWASP Top 10 vulnerabilities.
+- Flag hardcoded secrets, SQL injection, XSS, and command injection.
+- Suggest specific fixes with code examples.
+- Prioritize findings by severity (Critical, High, Medium, Low).
+
+## Output Format
+
+For each finding, provide:
+1. **Severity**: Critical / High / Medium / Low
+2. **Location**: File and line number
+3. **Issue**: Description of the vulnerability
+4. **Fix**: Recommended remediation with code example
+```
+
+## Commands
+
+Commands are user-invoked slash commands. When installed, they are namespaced under the package name.
+
+**Naming:**
+
+Commands are invoked as `/{package-name}:{command-name}`. For example, a command file `run-tests.md` in a package named `api-testing` is invoked as `/api-testing:run-tests`.
+
+**Requirements:**
+
+- Each command file declared in `components.commands` MUST be a Markdown file.
+- The command file MUST include YAML frontmatter with at least `name` and `description` fields.
+
+**Command Frontmatter:**
+
+| Field | Required | Constraints | Description |
+|---|---|---|---|
+| `name` | REQUIRED | Same constraints as skill `name`. | The command identifier (without package prefix). |
+| `description` | REQUIRED | Max 256 characters. | Short description shown in command listings. |
+| `arguments` | OPTIONAL | Array of argument definitions. | Positional or named arguments the command accepts. |
+
+**Argument Definition:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | REQUIRED | `string` | Argument name. |
+| `description` | REQUIRED | `string` | Argument description. |
+| `required` | OPTIONAL | `boolean` | Default: `false`. |
+
+The Markdown body defines the command's execution instructions.
+
+**Example command file:**
+
+```markdown
+---
+name: run-tests
+description: Execute API test suites against the configured endpoint.
+arguments:
+  - name: suite
+    description: Name of the test suite to run. Runs all suites if omitted.
+    required: false
+---
+
+# Run API Tests
+
+Execute the API test suite against ${config.API_BASE_URL}.
+
+## Steps
+
+1. Read the test definitions from `tests/` directory.
+2. For each test case, construct the HTTP request.
+3. Execute requests and compare responses against expected values.
+4. Report results in a summary table.
+```
+
+## Hooks
+
+Hooks are deterministic event handlers that execute shell scripts in response to host events. Hooks do not involve LLM interpretation; they are direct script executions.
+
+**Requirements:**
+
+- The hooks configuration file declared in `components.hooks` MUST be a valid JSON file.
+- All scripts referenced by hooks MUST be included in the archive (typically in the `scripts/` directory).
+- Hook scripts MUST NOT reference files outside the package installation directory.
+
+**hooks.json Format:**
+
+The hooks file is a JSON object where each key is an event type and the value is an array of hook definitions.
+
+**Event Types:**
+
+| Event | Description |
+|---|---|
+| `PreToolUse` | Fired before a tool is invoked. |
+| `PostToolUse` | Fired after a tool invocation completes. |
+| `SessionStart` | Fired when a coding session begins. |
+| `SessionStop` | Fired when a coding session ends. |
+| `Notification` | Fired on system notifications. |
+
+Hosts MAY define additional event types. Hooks for unrecognized event types MUST be silently ignored.
+
+**Hook Definition:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `matcher` | OPTIONAL | `string` | A pattern to filter the event (e.g., tool name for `PreToolUse`). If omitted, the hook fires for all events of its type. |
+| `command` | REQUIRED | `string` | The shell command to execute. Relative paths are resolved from the package installation directory. |
+| `timeout` | OPTIONAL | `number` | Maximum execution time in milliseconds. Default: 10000. |
+
+**Example hooks.json:**
+
+```json
+{
+  "PostToolUse": [
+    {
+      "matcher": "Bash",
+      "command": "scripts/lint-output.sh",
+      "timeout": 5000
+    }
+  ],
+  "SessionStart": [
+    {
+      "command": "scripts/check-env.sh"
+    }
+  ]
+}
+```
+
+## MCP Servers
+
+MCP (Model Context Protocol) server configurations enable packages to provide tools, resources, and prompts via the MCP standard.
+
+**Requirements:**
+
+- The MCP configuration file declared in `components.mcp` MUST be a valid JSON file.
+- The file is a **template**: it MAY contain `${config.VARIABLE_NAME}` substitution markers that are resolved at install time from user-supplied configuration values.
+
+**Server Modes:**
+
+ccpkg supports three modes for MCP server configuration:
+
+### Mode 1: Traditional (command + args)
+
+The server is started as an external process. The `command`, `args`, and `env` fields follow the standard MCP server configuration format.
+
+```json
+{
+  "mcpServers": {
+    "api-testing-server": {
+      "command": "node",
+      "args": ["server/index.js"],
+      "env": {
+        "API_KEY": "${config.API_KEY}",
+        "BASE_URL": "${config.API_BASE_URL}"
+      }
+    }
+  }
+}
+```
+
+### Mode 2: Embedded mcpb bundle
+
+The server is bundled as an `.mcpb` file inside the archive. The `bundle` field points to the file path within the archive.
+
+```json
+{
+  "mcpServers": {
+    "api-testing-server": {
+      "bundle": "mcp/server.mcpb",
+      "env": {
+        "API_KEY": "${config.API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Mode 3: Referenced mcpb bundle
+
+The server is referenced by an external URL with checksum verification. The archive does not contain the bundle; it is fetched at install time.
+
+```json
+{
+  "mcpServers": {
+    "api-testing-server": {
+      "source": "https://example.com/mcp/server-1.0.0.mcpb",
+      "checksum": "sha256:a1b2c3d4...",
+      "env": {
+        "API_KEY": "${config.API_KEY}"
+      }
+    }
+  }
+}
+```
+
+> **Note:** Mode 3 is an exception to the self-contained principle. When using referenced bundles, the installer MUST fetch and verify the bundle at install time, not at runtime. The fetched bundle SHOULD be cached locally so that subsequent loads do not require network access.
+
+The `source` URL MUST use HTTPS (see [Transport Security](/specification/security#transport-security)).
+
+### Variable Substitution
+
+Template variables use the syntax `${config.VARIABLE_NAME}`. The variable name MUST correspond to a key in the manifest's `config` object.
+
+- Installers MUST resolve all template variables at install time.
+- If a required config variable is missing, the installer MUST report an error and abort.
+- If an optional config variable is missing and has a default, the default MUST be used.
+- If an optional config variable is missing and has no default, the template variable MUST be replaced with an empty string.
+
+## LSP Servers
+
+LSP (Language Server Protocol) server configurations enable packages to provide language intelligence features such as diagnostics, completions, and code actions.
+
+**Requirements:**
+
+- The LSP configuration file declared in `components.lsp` MUST be a valid JSON file.
+- The file is a template with the same `${config.VARIABLE_NAME}` substitution syntax as MCP templates.
+
+**Example .lsp.json:**
+
+```json
+{
+  "lspServers": {
+    "openapi-lsp": {
+      "command": "node",
+      "args": ["lsp/server.js", "--stdio"],
+      "languages": ["yaml", "json"],
+      "env": {
+        "SCHEMA_PATH": "${config.SCHEMA_PATH}"
+      }
+    }
+  }
+}
+```
+
+## Instructions
+
+Instructions are canonical documentation files that provide guidance to the AI coding assistant. The `instructions/INSTRUCTIONS.md` file contains the universal instruction content. The `instructions/mappings.json` file maps this content to tool-specific filenames.
+
+**Requirements:**
+
+- If `components.instructions` is declared, the referenced file MUST exist in the archive.
+- A `mappings.json` file SHOULD be present alongside the instructions file.
+- Installers MUST copy the canonical instructions file to the appropriate tool-specific filename during installation.
+
+**mappings.json Format:**
+
+```json
+{
+  "claude": "CLAUDE.md",
+  "codex": "AGENTS.md",
+  "copilot": ".github/copilot-instructions.md",
+  "gemini": "GEMINI.md"
+}
+```
+
+The keys are tool identifiers matching those used in the `targets` manifest field. The values are relative file paths (from the project or user config root) where the instructions should be written.
+
+If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`. Authors SHOULD use `targets.*.instructions_file` for simple cases. Use `mappings.json` when the package needs to support hosts not listed in targets.
+
+If the active host tool is not present in either `targets` or `mappings.json`, the installer SHOULD copy the file as `INSTRUCTIONS.md` and emit a warning.

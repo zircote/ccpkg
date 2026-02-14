@@ -1,0 +1,41 @@
+---
+title: "Configuration"
+description: "Configuration resolution order, storage, and variable substitution in templates."
+---
+
+# Configuration Resolution
+
+Configuration resolution is the process by which user-supplied values are matched to the config slots declared in the manifest.
+
+## Config Value Resolution Order
+
+When resolving a config variable, the installer MUST use the following precedence order (highest to lowest):
+
+1. **User-supplied value** — provided interactively during install or pre-configured in host settings.
+2. **Config default** — the `default` value declared in the manifest config slot.
+3. **Error** — if the slot is `required` and no value is found, the installer MUST report an error.
+
+If a slot is not `required` and no value is available from steps 1 or 2, the variable is treated as unset.
+
+## Storage
+
+Config values are stored in the host's settings mechanism, namespaced under the package name:
+
+```json
+{
+  "packages": {
+    "api-testing": {
+      "API_BASE_URL": "https://api.example.com",
+      "API_KEY": "sk-...",
+      "ENVIRONMENT": "staging"
+    }
+  }
+}
+```
+
+- Values of type `secret` MUST be masked in all log output and MUST NOT appear in lockfiles.
+- Installers SHOULD store secrets using the host's secure storage mechanism when available.
+
+## Variable Substitution
+
+Template variables in `.mcp.json` and `.lsp.json` files use the syntax `${config.VARIABLE_NAME}`. The substitution rules defined in [MCP Servers > Variable Substitution](/specification/component-types#variable-substitution) apply. Substitution occurs at install time when templates are rendered to their final form.

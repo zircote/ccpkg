@@ -1,0 +1,176 @@
+---
+title: "Manifest"
+description: "The manifest.json schema — top-level fields, author, components, config, compatibility, and targets objects."
+---
+
+# Manifest Schema
+
+The `manifest.json` file is a JSON object that declares the package identity, contents, configuration, and compatibility. Installers MUST parse this file to determine how to install and register the package.
+
+## Top-Level Fields
+
+| Field | Required | Type | Constraints | Description |
+|---|---|---|---|---|
+| `spec_version` | REQUIRED | `string` | Date format `YYYY-MM-DD` | The ccpkg specification version this package conforms to. |
+| `name` | REQUIRED | `string` | 1–64 characters. Lowercase alphanumeric and hyphens. MUST NOT start or end with a hyphen. MUST NOT contain consecutive hyphens. | The package identifier. Used as a namespace prefix for commands and config. |
+| `version` | REQUIRED | `string` | Valid [semver](https://semver.org/) string. | The package version. |
+| `description` | REQUIRED | `string` | 1–1024 characters. | A human-readable description of the package. |
+| `author` | REQUIRED | `object` | See [Author Object](#author-object). | The package author. |
+| `license` | OPTIONAL | `string` | SPDX license identifier or `"SEE LICENSE IN <filename>"`. | The package license. |
+| `repository` | OPTIONAL | `string` | Valid URL. | URL to the source repository. |
+| `homepage` | OPTIONAL | `string` | Valid URL. | URL to the package homepage. |
+| `scope` | OPTIONAL | `string` | One of `"user"`, `"project"`, `"any"`. Default: `"any"`. | The author's recommended install scope. |
+| `components` | REQUIRED | `object` | See [Components Object](#components-object). | Declares the package contents. |
+| `config` | OPTIONAL | `object` | See [Config Object](#config-object). | Declares configuration slots for user-supplied values. |
+| `compatibility` | OPTIONAL | `object` | See [Compatibility Object](#compatibility-object). | Declares host compatibility constraints. |
+| `targets` | OPTIONAL | `object` | See [Targets Object](#targets-object). | Tool-specific adapter mappings. |
+| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | Integrity hash of the archive (excluding the checksum field itself). |
+
+## Author Object
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | REQUIRED | `string` | The author's name or organization. |
+| `url` | OPTIONAL | `string` | URL to the author's profile or website. |
+| `email` | OPTIONAL | `string` | Contact email address. |
+
+## Components Object
+
+The `components` object declares which component types are included in the archive. All fields are OPTIONAL. If a field is present, the referenced paths MUST exist in the archive.
+
+| Field | Type | Description |
+|---|---|---|
+| `skills` | `string[]` | Paths to skill directories. Each directory MUST contain a `SKILL.md` file conforming to the [Agent Skills specification](https://agentskills.io/specification). |
+| `agents` | `string[]` | Paths to agent directories. Each directory MUST contain an `AGENT.md` file. |
+| `commands` | `string[]` | Paths to command definition files. |
+| `hooks` | `string` | Path to a `hooks.json` file within the archive. |
+| `mcp` | `string` | Path to an `.mcp.json` template file within the archive. |
+| `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
+| `instructions` | `string` | Path to the canonical `INSTRUCTIONS.md` file within the archive. |
+
+## Config Object
+
+The `config` object defines configuration slots that users populate at install time. Each key is a configuration variable name; the value is a config slot definition.
+
+Config variable names MUST match the pattern `[A-Z][A-Z0-9_]*` (uppercase letters, digits, and underscores, starting with a letter). This convention matches environment variable naming, ensuring config values can be directly mapped to process environment variables during template substitution.
+
+### Config Slot Definition
+
+| Field | Required | Type | Constraints | Description |
+|---|---|---|---|---|
+| `type` | REQUIRED | `string` | One of `"secret"`, `"string"`, `"number"`, `"boolean"`, `"enum"`, `"path"`. | The value type. |
+| `description` | REQUIRED | `string` | Max 512 characters. | Human-readable description of this config slot. |
+| `required` | OPTIONAL | `boolean` | Default: `false`. | Whether the user MUST provide a value. |
+| `default` | OPTIONAL | varies | Must match the declared `type`. | The default value if the user does not provide one. |
+| `values` | Conditional | `string[]` | REQUIRED when `type` is `"enum"`. | The set of allowed values. |
+
+**Config type semantics:**
+
+| Type | JSON Type | Description |
+|---|---|---|
+| `secret` | `string` | Sensitive value (API key, token). MUST be masked in logs and output. MUST NOT be stored in lockfiles. |
+| `string` | `string` | Arbitrary string value. |
+| `number` | `number` | Numeric value (integer or floating-point). |
+| `boolean` | `boolean` | Boolean value (`true` or `false`). |
+| `enum` | `string` | One of a fixed set of string values defined in `values`. |
+| `path` | `string` | A filesystem path. Installers SHOULD validate that the path exists. |
+
+## Compatibility Object
+
+The `compatibility` object declares version constraints for host tools. Each key is a tool identifier; the value is a semver range string.
+
+```json
+{
+  "compatibility": {
+    "claude_code": ">=1.0.0",
+    "codex_cli": ">=0.5.0"
+  }
+}
+```
+
+Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
+
+## Targets Object
+
+The `targets` object provides tool-specific overrides and adapter mappings. Each key is a tool identifier. The value is an object with tool-specific configuration.
+
+```json
+{
+  "targets": {
+    "claude": {
+      "instructions_file": "CLAUDE.md"
+    },
+    "codex": {
+      "instructions_file": "AGENTS.md"
+    },
+    "copilot": {
+      "instructions_file": ".github/copilot-instructions.md"
+    },
+    "gemini": {
+      "instructions_file": "GEMINI.md"
+    }
+  }
+}
+```
+
+The contents of `targets` are not strictly defined by this specification. Tool-specific adapters define their own schemas. The `instructions_file` key is the primary standard adapter field, specifying the filename to which the canonical `INSTRUCTIONS.md` is copied for that tool.
+
+## Example Manifest
+
+```json
+{
+  "spec_version": "2026-02-14",
+  "name": "api-testing",
+  "version": "1.0.0",
+  "description": "Skills and tools for API testing workflows, including OpenAPI validation, request generation, and mock server management.",
+  "author": {
+    "name": "Example Org",
+    "url": "https://github.com/example-org"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/example-org/api-testing-ccpkg",
+  "scope": "project",
+  "components": {
+    "skills": [
+      "skills/openapi-validator",
+      "skills/request-generator"
+    ],
+    "commands": [
+      "commands/run-tests.md"
+    ],
+    "hooks": "hooks/hooks.json",
+    "mcp": "mcp/.mcp.json",
+    "instructions": "instructions/INSTRUCTIONS.md"
+  },
+  "config": {
+    "API_BASE_URL": {
+      "type": "string",
+      "description": "Base URL for the target API.",
+      "required": true
+    },
+    "API_KEY": {
+      "type": "secret",
+      "description": "Authentication key for the target API.",
+      "required": true
+    },
+    "ENVIRONMENT": {
+      "type": "enum",
+      "description": "Target environment for API requests.",
+      "values": ["development", "staging", "production"],
+      "default": "development"
+    }
+  },
+  "compatibility": {
+    "claude_code": ">=1.0.0"
+  },
+  "targets": {
+    "claude": {
+      "instructions_file": "CLAUDE.md"
+    },
+    "codex": {
+      "instructions_file": "AGENTS.md"
+    }
+  },
+  "checksum": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+}
+```

@@ -1,0 +1,66 @@
+---
+title: "Lockfile"
+description: "Lockfile format, schema, and usage for deterministic environment reproduction."
+---
+
+# Lockfile Format
+
+The lockfile records the state of all installed packages at a given scope. It enables deterministic environment reproduction and team sharing.
+
+## Location
+
+| Scope | Lockfile Path |
+|---|---|
+| User | `~/.claude/ccpkg-lock.json` |
+| Project | `{project-root}/.claude/ccpkg-lock.json` |
+
+## Schema
+
+```json
+{
+  "lockfile_version": 1,
+  "packages": {
+    "api-testing": {
+      "version": "1.0.0",
+      "spec_version": "2026-02-14",
+      "checksum": "sha256:a1b2c3d4...",
+      "installed_at": "2026-02-14T12:00:00Z",
+      "scope": "project",
+      "source": "https://example.com/api-testing-1.0.0.ccpkg",
+      "config_hash": "sha256:f7e8d9c0...",
+      "components": {
+        "skills": ["skills/openapi-validator", "skills/request-generator"],
+        "commands": ["commands/run-tests.md"],
+        "hooks": "hooks/hooks.json",
+        "mcp": "mcp/.mcp.json"
+      }
+    }
+  }
+}
+```
+
+**Lockfile fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `lockfile_version` | `number` | The lockfile schema version. Currently `1`. |
+| `packages` | `object` | Map of package name to install record. |
+
+**Install record fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `version` | `string` | Installed package version. |
+| `spec_version` | `string` | The ccpkg spec version the package was built for. |
+| `checksum` | `string` | SHA-256 hash of the installed archive. |
+| `installed_at` | `string` | ISO 8601 timestamp of installation. |
+| `scope` | `string` | Install scope (`"user"` or `"project"`). |
+| `source` | `string` | The URL or path from which the package was installed. Prefixed with `link:` for dev-mode linked packages (e.g., `link:/Users/me/my-plugin`). |
+| `config_hash` | `string` | SHA-256 hash of the resolved config values (excluding secrets). Used to detect config drift. |
+| `components` | `object` | Mirror of the manifest `components` object for quick reference. |
+
+## Usage
+
+- **Project lockfiles** (`{project-root}/.claude/ccpkg-lock.json`) SHOULD be committed to version control. This allows team members to reproduce the same package environment.
+- **User lockfiles** (`~/.claude/ccpkg-lock.json`) are personal and SHOULD NOT be shared.
+- An installer MAY provide a `ccpkg restore` command that reads the lockfile and installs all listed packages at their recorded versions.

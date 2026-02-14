@@ -1,0 +1,86 @@
+---
+title: "Registry"
+description: "Optional decentralized registry protocol for package discovery, search, and version resolution."
+---
+
+# Registry Protocol
+
+Registries are OPTIONAL. They provide package discovery, search, and version resolution. No central authority is required; users MAY configure multiple registries, and registries are additive.
+
+## Registry Index Format
+
+A registry is a JSON file hosted at any URL. The file contains a package index:
+
+```json
+{
+  "registry_version": 1,
+  "name": "community-packages",
+  "url": "https://registry.example.com/index.json",
+  "packages": [
+    {
+      "name": "api-testing",
+      "version": "1.0.0",
+      "description": "Skills and tools for API testing workflows.",
+      "author": {
+        "name": "Example Org"
+      },
+      "url": "https://registry.example.com/packages/api-testing-1.0.0.ccpkg",
+      "checksum": "sha256:a1b2c3d4...",
+      "tags": ["api", "testing", "openapi"],
+      "published_at": "2026-02-14T12:00:00Z",
+      "downloads": 1234,
+      "verified": true
+    }
+  ]
+}
+```
+
+**Registry index fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `registry_version` | REQUIRED | `number` | Schema version. Currently `1`. |
+| `name` | REQUIRED | `string` | Human-readable registry name. |
+| `url` | REQUIRED | `string` | Canonical URL of this registry index. |
+| `packages` | REQUIRED | `array` | Array of package entries. |
+
+**Package entry fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | REQUIRED | `string` | Package name. |
+| `version` | REQUIRED | `string` | Package version (semver). |
+| `description` | REQUIRED | `string` | Package description. |
+| `author` | REQUIRED | `object` | Author object (same schema as manifest). |
+| `url` | REQUIRED | `string` | Download URL for the `.ccpkg` archive. |
+| `checksum` | REQUIRED | `string` | SHA-256 checksum of the archive. |
+| `tags` | OPTIONAL | `string[]` | Searchable tags. |
+| `published_at` | OPTIONAL | `string` | ISO 8601 publication timestamp. |
+| `downloads` | OPTIONAL | `number` | Download count. |
+| `verified` | OPTIONAL | `boolean` | Whether the registry has verified the package. |
+
+## Registry Configuration
+
+Users configure registries in their host settings:
+
+```json
+{
+  "ccpkg": {
+    "registries": [
+      "https://registry.example.com/index.json",
+      "https://my-team.github.io/packages/index.json"
+    ]
+  }
+}
+```
+
+## Resolution Behavior
+
+When a user installs a package by name (e.g., `ccpkg install api-testing`):
+
+1. The installer queries all configured registries.
+2. Matching packages are collected across registries.
+3. If multiple versions match, the highest semver version is selected.
+4. If the same name and version appear in multiple registries, the first registry in the configuration list takes precedence.
+
+Registry URLs MUST use HTTPS (see [Transport Security](/specification/security#transport-security)).

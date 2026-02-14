@@ -1,0 +1,43 @@
+---
+title: "Security"
+description: "Install-time safety, transport security, checksum verification, secrets management, hook safety, and supply chain considerations."
+---
+
+# Security Considerations
+
+## Install-Time Safety
+
+- Packages MUST NOT execute code during installation. The install process is declarative: extract, substitute config variables, register. There are no postinstall scripts.
+- Installers MUST reject archives containing path traversal sequences (`../`) in any entry path.
+- Installers MUST validate that all paths referenced in the manifest exist within the archive.
+
+## Transport Security
+
+- All remote fetches (archive downloads, registry queries, referenced mcpb bundles) MUST use HTTPS. Installers MUST reject non-HTTPS URLs for remote resources.
+
+## Checksum Verification
+
+Checksums provide integrity verification — they detect accidental corruption and transmission errors, not deliberate tampering. Cryptographic package signing is deferred to a future specification version (see [Supply Chain](#supply-chain)).
+
+- Installers SHOULD compute and verify SHA-256 checksums for all downloaded archives.
+- If a manifest `checksum` field is present, the installer MUST verify it. A mismatch MUST abort installation.
+- Registry entries MUST include checksums. Installers MUST verify registry-provided checksums.
+
+## Secrets Management
+
+- Config values of type `secret` MUST be masked in all log output, error messages, and diagnostic displays.
+- Secrets MUST NOT be written to lockfiles, debug logs, or any file that may be committed to version control.
+- Installers SHOULD use the host's secure storage mechanism (e.g., system keychain) when available.
+- Secrets MUST NOT be embedded in package archives.
+
+## Hook Safety
+
+- Hook scripts execute with the user's operating system permissions. Hooks have full access to the user's filesystem and processes. Users MUST review hook scripts from untrusted sources before installation.
+- Installers SHOULD display hook scripts for user review during installation.
+- Hosts SHOULD apply timeouts to hook execution to prevent runaway processes.
+
+## Supply Chain
+
+- Registries SHOULD support package signing as a future extension.
+- Users SHOULD prefer packages from known, trusted authors.
+- Project lockfiles provide a reproducibility guarantee: team members install the exact same package versions with verified checksums.

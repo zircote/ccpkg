@@ -1,0 +1,39 @@
+---
+title: "Appendices"
+description: "JSON Schema reference, reserved package names, and glossary of terms."
+---
+
+# Appendices
+
+## Appendix A: Complete Manifest JSON Schema Reference
+
+The normative JSON Schema for `manifest.json` is published separately at `spec/schemas/manifest.schema.json` in the [ccpkg repository](https://github.com/zircote/ccpkg). The schema in this appendix is informational.
+
+Installers SHOULD validate manifests against the published JSON Schema.
+
+## Appendix B: Reserved Package Names
+
+The following package names are reserved and MUST NOT be used by third-party packages:
+
+- `ccpkg` — reserved for the installer itself.
+- `core` — reserved for future use.
+- `test` — reserved for test fixtures.
+
+## Appendix C: Glossary
+
+| Term | Definition |
+|---|---|
+| **Archive** | A `.ccpkg` ZIP file containing a manifest and package components. |
+| **Component** | A discrete unit of functionality within a package (skill, agent, command, hook, MCP server, LSP server, or instructions). |
+| **Config slot** | A declared configuration variable in the manifest that accepts user-supplied values. |
+| **Host** | The AI coding assistant application that loads and uses installed packages. |
+| **Installer** | The tool that processes `.ccpkg` archives and registers components with the host. |
+| **Lockfile** | A JSON file recording the exact installed state of all packages at a scope. |
+| **Manifest** | The `manifest.json` file at the archive root that declares package identity, contents, and configuration. |
+| **Registry** | An optional JSON index of available packages, hosted at any URL. |
+| **Scope** | The installation level: `user` (personal, global) or `project` (per-repository). |
+| **Template** | A JSON configuration file (`.mcp.json` or `.lsp.json`) containing `${config.*}` variable substitution markers. |
+
+---
+
+*This specification is published under the terms of the project's license. For the latest version, see the [ccpkg repository](https://github.com/zircote/ccpkg).*

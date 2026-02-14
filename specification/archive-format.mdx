@@ -1,0 +1,60 @@
+---
+title: "Archive Format"
+description: "File extension, MIME type, archive requirements, and directory structure for .ccpkg files."
+---
+
+# Archive Format
+
+## File Extension and MIME Type
+
+| Property | Value |
+|---|---|
+| File extension | `.ccpkg` |
+| MIME type | `application/vnd.ccpkg+zip` |
+| Magic bytes | `PK` (standard ZIP header, bytes `50 4B 03 04`) |
+
+## Archive Requirements
+
+A ccpkg archive is a standard ZIP file. The following requirements apply:
+
+- The archive MUST contain a `manifest.json` file at the archive root.
+- All paths within the archive MUST use forward slashes (`/`) as path separators.
+- The archive MUST NOT contain entries with paths that traverse outside the archive root (e.g., `../escape/file.txt`). Installers MUST reject archives containing path traversal sequences.
+- The archive SHOULD be compressed using the DEFLATE algorithm.
+- Archives SHOULD NOT exceed 50 MB. Packages requiring large binary dependencies SHOULD use Mode 3 (referenced mcpb) to keep the archive small.
+- The archive filename SHOULD follow the convention `{name}-{version}.ccpkg`.
+
+## Directory Structure
+
+```
+example-plugin-1.2.0.ccpkg (ZIP)
+├── manifest.json                   # REQUIRED — package manifest
+├── skills/
+│   └── skill-name/
+│       ├── SKILL.md                # Agent Skills format
+│       ├── scripts/
+│       │   └── extract.py
+│       └── references/
+│           └── REFERENCE.md
+├── agents/
+│   └── agent-name/
+│       └── AGENT.md
+├── commands/
+│   └── command-name.md
+├── hooks/
+│   └── hooks.json
+├── scripts/
+│   └── hook-handler.sh             # Backing scripts for hooks
+├── mcp/
+│   └── .mcp.json                   # MCP server config template
+├── lsp/
+│   └── .lsp.json                   # LSP server config template
+├── instructions/
+│   ├── INSTRUCTIONS.md             # Canonical instruction file
+│   └── mappings.json               # Tool-specific filename mappings
+├── config.schema.json              # OPTIONAL — JSON Schema for config
+├── icon.png                        # OPTIONAL — package icon (PNG, max 512x512)
+└── LICENSE                         # OPTIONAL — license file
+```
+
+Only `manifest.json` is REQUIRED. All other files and directories are OPTIONAL and declared via the `components` field in the manifest.

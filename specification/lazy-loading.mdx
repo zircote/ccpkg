@@ -1,0 +1,31 @@
+---
+title: "Lazy Loading"
+description: "Startup behavior and on-demand component loading for minimal session overhead."
+---
+
+# Lazy Loading
+
+Lazy loading minimizes startup overhead by deferring component activation until the component is actually needed.
+
+## Startup Behavior
+
+At session start, the host performs the following:
+
+1. Read the lockfile(s) (user and project scope).
+2. For each installed package, load **only** the manifest metadata: `name`, `description`, and the `components` declaration.
+3. Register skill and agent names and descriptions for discovery (so the LLM can decide when to activate them).
+4. Register command names and descriptions for slash-command completion.
+5. Register hook event bindings (but do not execute hook scripts).
+
+The host MUST NOT read full `SKILL.md`, `AGENT.md`, or command file contents at startup.
+
+## On-Demand Loading
+
+| Component | Trigger | What Is Loaded |
+|---|---|---|
+| Skill | LLM decides to activate the skill based on name/description | Full `SKILL.md` body, then `scripts/` and `references/` as needed |
+| Agent | User or LLM activates the agent | Full `AGENT.md` body |
+| Command | User invokes the slash command | Full command file content |
+| Hook | Host event fires matching the hook's event type | Hook script executed |
+| MCP server | First tool invocation targeting the server | Server process started |
+| LSP server | First file opened matching the server's language scope | Server process started |

@@ -1,0 +1,29 @@
+---
+title: "Versioning"
+description: "Package versioning with semver, specification versioning with dates, and version range semantics."
+---
+
+# Versioning
+
+## Package Versioning
+
+Packages MUST use [Semantic Versioning 2.0.0](https://semver.org/):
+
+- **MAJOR** version: incompatible changes to the package's public interface (skills renamed or removed, config slots renamed, breaking behavior changes).
+- **MINOR** version: backwards-compatible additions (new skills, new config slots with defaults, new commands).
+- **PATCH** version: backwards-compatible fixes (bug fixes in scripts, documentation updates, improved prompts).
+
+## Specification Versioning
+
+The ccpkg specification uses date-based versioning (`YYYY-MM-DD`), following the convention established by the MCP specification:
+
+- Each specification version is identified by its publication date.
+- Breaking changes to the manifest schema or archive format require a new specification version.
+- The `spec_version` field in `manifest.json` declares which specification version the package conforms to.
+- Installers SHOULD support packages built against older specification versions when possible.
+
+## Version Ranges
+
+- Lockfiles record exact versions.
+- The `compatibility` object in manifests uses semver range syntax (e.g., `">=1.0.0"`, `"^2.0.0"`, `">=1.0.0 <3.0.0"`).
+- Registries MAY host multiple versions of the same package. Installers select the highest version satisfying the user's constraints.
