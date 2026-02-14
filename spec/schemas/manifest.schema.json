@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccpkg.dev/schemas/manifest.schema.json",
+  "title": "ccpkg Manifest Schema",
+  "description": "Schema for the manifest.json file in a .ccpkg package.",
+  "type": "object",
+  "required": ["name", "version", "description", "author", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Unique package identifier. Lowercase alphanumeric and hyphens only. No leading, trailing, or consecutive hyphens."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?(\\+[a-zA-Z0-9.]+)?$",
+      "description": "Semantic version string (e.g. 1.0.0, 1.2.3-beta.1, 1.0.0+build.42)."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Human-readable description of the package."
+    },
+    "author": {
+      "type": "object",
+      "description": "Package author information.",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Author's display name."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Author's homepage or profile URL."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Author's contact email address."
+        }
+      }
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g. MIT, Apache-2.0) or a file reference (e.g. SEE LICENSE IN LICENSE.md)."
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the source code repository."
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the package homepage or documentation site."
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["user", "project", "any"],
+      "default": "any",
+      "description": "Author's recommended install scope. 'user' for global user-level install, 'project' for project-local install, 'any' for no preference."
+    },
+    "components": {
+      "type": "object",
+      "description": "Declares the installable components included in the package. At least one component must be present (enforced by tooling, not expressible as a JSON Schema constraint).",
+      "additionalProperties": false,
+      "properties": {
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths to skill directories relative to the package root. Each directory MUST contain a SKILL.md file."
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths to agent directories relative to the package root. Each directory MUST contain an AGENT.md file."
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths to command files relative to the package root."
+        },
+        "hooks": {
+          "type": "string",
+          "description": "Path to a hooks.json file relative to the package root."
+        },
+        "mcp": {
+          "type": "string",
+          "description": "Path to a .mcp.json template file relative to the package root."
+        },
+        "lsp": {
+          "type": "string",
+          "description": "Path to a .lsp.json template file relative to the package root."
+        },
+        "instructions": {
+          "type": "string",
+          "description": "Path to a canonical instructions file relative to the package root."
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Declares user-configurable values required by the package. Keys are configuration variable names.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["secret", "string", "number", "boolean", "enum", "path"],
+            "description": "The data type of this configuration value."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable explanation of what this configuration value controls."
+          },
+          "required": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether the user must provide a value during install. Defaults to false."
+          },
+          "default": {
+            "description": "Default value used when the user does not provide one. Type varies based on the 'type' field."
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed values. Required when type is 'enum'."
+          }
+        },
+        "if": {
+          "properties": {
+            "type": {
+              "const": "enum"
+            }
+          }
+        },
+        "then": {
+          "required": ["type", "description", "values"]
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "description": "Declares version compatibility requirements. Keys are tool identifiers, values are semver range strings.",
+      "properties": {
+        "claude_code": {
+          "type": "string",
+          "description": "Semver range for compatible Claude Code versions (e.g. >=1.0.0, ^2.1.0)."
+        }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "description": "Semver range for the named tool or runtime."
+      }
+    },
+    "targets": {
+      "type": "object",
+      "description": "Per-target overrides for component paths. Keys are target identifiers (e.g. tool names or platforms).",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Target-specific path overrides.",
+        "properties": {
+          "instructions_file": {
+            "type": "string",
+            "description": "Override path to the instructions file for this target."
+          },
+          "skills_dir": {
+            "type": "string",
+            "description": "Override path to the skills directory for this target."
+          },
+          "hooks_file": {
+            "type": "string",
+            "description": "Override path to the hooks file for this target."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "checksum": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 integrity hash of the archive contents. Format: sha256:<64-char hex digest>."
+    }
+  }
+}

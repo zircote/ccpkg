@@ -1,0 +1,61 @@
+---
+layout: default
+title: Home
+nav_order: 1
+---
+
+# ccpkg
+
+> An open packaging format for AI coding assistant extensions.
+
+ccpkg is a self-contained archive format for packaging and distributing
+skills, agents, commands, hooks, MCP servers, and LSP servers as a single
+portable unit. One file, one install, zero post-install steps.
+
+## Why ccpkg?
+
+AI coding assistants are increasingly extensible, but sharing extensions
+is fragmented and unreliable. ccpkg solves this with a universal format
+built on open standards.
+
+**For extension authors**: Package once, distribute everywhere. Your
+skills, MCP servers, and hooks ship as a single `.ccpkg` file that works
+across Claude Code, Gemini CLI, Codex, Copilot, and other compatible
+tools.
+
+**For users**: Install extensions with confidence. Self-contained
+archives mean no dependency hell, no broken installs, and no minutes-long
+startup fetches. Lazy loading keeps your sessions fast.
+
+**For teams**: Share curated extension sets with deterministic lockfiles.
+Project-scoped packages travel with the repo. User-scoped packages stay
+personal.
+
+## Built on open standards
+
+ccpkg composes existing specifications rather than replacing them:
+
+| Standard | Role |
+|---|---|
+| [Agent Skills](https://agentskills.io/) | Skill format (SKILL.md) |
+| [Model Context Protocol](https://modelcontextprotocol.io/) | MCP server configuration |
+| [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) | LSP server configuration |
+| [Semantic Versioning](https://semver.org/) | Package versioning |
+| [JSON Schema](https://json-schema.org/) | Manifest validation |
+
+## Quick links
+
+- [Specification](spec/specification.html) --- the formal format
+  definition
+- [Design Document](docs/plans/2026-02-14-ccpkg-design.html) ---
+  rationale and decisions behind the design
+- [Manifest Schema](spec/schemas/manifest.schema.json) ---
+  machine-readable JSON Schema for manifest.json
+- [GitHub Repository](https://github.com/zircote/plugin-packaging) ---
+  source code and issue tracker
+
+## Status
+
+This specification is a **draft** (version 2026-02-14). Feedback and
+contributions are welcome via
+[GitHub Issues](https://github.com/zircote/plugin-packaging/issues).

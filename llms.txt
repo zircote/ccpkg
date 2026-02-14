@@ -1,0 +1,30 @@
+# ccpkg - AI Coding Assistant Extension Packaging Format
+
+## Documentation Index
+
+- [Home](https://zircote.github.io/plugin-packaging/)
+- [Specification](https://zircote.github.io/plugin-packaging/spec/specification.html)
+- [Design Document](https://zircote.github.io/plugin-packaging/docs/plans/2026-02-14-ccpkg-design.html)
+- [Manifest JSON Schema](https://zircote.github.io/plugin-packaging/spec/schemas/manifest.schema.json)
+- [GitHub Repository](https://github.com/zircote/plugin-packaging)
+
+## Overview
+
+ccpkg is an open packaging format for distributing AI coding
+assistant extensions. A ccpkg archive is a self-contained ZIP file
+with a declarative manifest that bundles skills, agents, commands,
+hooks, MCP servers, LSP servers, and configuration into a single
+portable unit.
+
+The format is built on open standards: Agent Skills (SKILL.md),
+Model Context Protocol (MCP), Language Server Protocol (LSP),
+Semantic Versioning, and JSON Schema.
+
+## Key Concepts
+
+- Self-contained ZIP archives (.ccpkg)
+- Declarative manifest.json with typed configuration
+- Universal core + thin tool-specific adapters
+- Lazy loading for fast startup
+- No central registry required
+- No install-time code execution
