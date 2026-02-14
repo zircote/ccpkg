@@ -307,7 +307,13 @@ The npm model: `manifest.json` uses ranges like `^1.2.0` to express compatibilit
 
 All components are automatically prefixed by the package name. A skill `review` in package `code-tools` becomes `/code-tools:review`. A hook in `linter-pack` is registered under the `linter-pack` namespace. Conflicts are impossible by design. This matches how Claude Code plugins already namespace commands today.
 
-### 5. Package signing
+### 5. Inter-package dependencies
+
+**Decision: Explicitly out of scope for v1.**
+
+Dependency resolution between packages adds significant complexity (version solving, ordering, conflict resolution) for limited benefit at this stage. The self-contained principle already requires that all components needed by a package live inside the archive. If a skill needs an MCP server, both ship in the same `.ccpkg`. This may be revisited in a future spec version if the ecosystem grows to the point where shared components across packages become a common need.
+
+### 6. Package signing
 
 **Decision: Consistent with mcpb -- checksums in v1, signing deferred.**
 

@@ -51,11 +51,11 @@ ccpkg composes existing specifications rather than replacing them:
   rationale and decisions behind the design
 - [Manifest Schema](spec/schemas/manifest.schema.json) ---
   machine-readable JSON Schema for manifest.json
-- [GitHub Repository](https://github.com/zircote/plugin-packaging) ---
+- [GitHub Repository](https://github.com/zircote/ccpkg) ---
   source code and issue tracker
 
 ## Status
 
 This specification is a **draft** (version 2026-02-14). Feedback and
 contributions are welcome via
-[GitHub Issues](https://github.com/zircote/plugin-packaging/issues).
+[GitHub Issues](https://github.com/zircote/ccpkg/issues).

@@ -20,7 +20,7 @@ ccpkg is an open packaging format for distributing AI coding assistant extension
 
 The format is designed around a universal core—MCP, LSP, Agent Skills, and declarative configuration—with thin, tool-specific adapters that map these universal components to the conventions of individual AI coding assistants. This architecture enables a single package to work across Claude Code, OpenAI Codex CLI, GitHub Copilot, Google Gemini CLI, and other tools that adopt the format.
 
-For implementation guides and tooling, visit the [ccpkg repository](https://github.com/zircote/plugin-packaging).
+For implementation guides and tooling, visit the [ccpkg repository](https://github.com/zircote/ccpkg).
 
 ### Notational Conventions
 
@@ -58,6 +58,8 @@ The following principles guide the design of the ccpkg format. Implementors SHOU
 6. **Separated configuration.** User configuration MUST be separated from package contents. Secrets, preferences, and environment-specific values live outside the archive and are injected at install or load time.
 
 7. **No install-time code execution.** Packages MUST NOT execute arbitrary code during installation. There are no postinstall scripts, no build steps, and no setup hooks. The installation process is purely declarative: extract, configure, register.
+
+8. **No inter-package dependencies.** Inter-package dependencies are explicitly out of scope for this specification version. Each package MUST be self-contained and MUST NOT declare dependencies on other ccpkg packages. If a skill requires an MCP server, both MUST be packaged together in a single `.ccpkg` archive.
 
 ---
 
@@ -128,6 +130,7 @@ A ccpkg archive is a standard ZIP file. The following requirements apply:
 - All paths within the archive MUST use forward slashes (`/`) as path separators.
 - The archive MUST NOT contain entries with paths that traverse outside the archive root (e.g., `../escape/file.txt`). Installers MUST reject archives containing path traversal sequences.
 - The archive SHOULD be compressed using the DEFLATE algorithm.
+- Archives SHOULD NOT exceed 50 MB. Packages requiring large binary dependencies SHOULD use Mode 3 (referenced mcpb) to keep the archive small.
 - The archive filename SHOULD follow the convention `{name}-{version}.ccpkg`.
 
 ### Directory Structure
@@ -216,7 +219,7 @@ The `components` object declares which component types are included in the archi
 
 The `config` object defines configuration slots that users populate at install time. Each key is a configuration variable name; the value is a config slot definition.
 
-Config variable names MUST match the pattern `[A-Z][A-Z0-9_]*` (uppercase letters, digits, and underscores, starting with a letter).
+Config variable names MUST match the pattern `[A-Z][A-Z0-9_]*` (uppercase letters, digits, and underscores, starting with a letter). This convention matches environment variable naming, ensuring config values can be directly mapped to process environment variables during template substitution.
 
 #### Config Slot Definition
 
@@ -620,6 +623,8 @@ The server is referenced by an external URL with checksum verification. The arch
 
 > **Note:** Mode 3 is an exception to the self-contained principle. When using referenced bundles, the installer MUST fetch and verify the bundle at install time, not at runtime. The fetched bundle SHOULD be cached locally so that subsequent loads do not require network access.
 
+The `source` URL MUST use HTTPS (see [Transport Security](#transport-security)).
+
 **Variable Substitution:**
 
 Template variables use the syntax `${config.VARIABLE_NAME}`. The variable name MUST correspond to a key in the manifest's `config` object.
@@ -678,7 +683,7 @@ Instructions are canonical documentation files that provide guidance to the AI c
 
 The keys are tool identifiers matching those used in the `targets` manifest field. The values are relative file paths (from the project or user config root) where the instructions should be written.
 
-If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`.
+If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`. Authors SHOULD use `targets.*.instructions_file` for simple cases. Use `mappings.json` when the package needs to support hosts not listed in targets.
 
 If the active host tool is not present in either `targets` or `mappings.json`, the installer SHOULD copy the file as `INSTRUCTIONS.md` and emit a warning.
 
@@ -719,14 +724,7 @@ Config values are stored in the host's settings mechanism, namespaced under the 
 
 ### Variable Substitution
 
-Template variables in `.mcp.json` and `.lsp.json` files use the syntax `${config.VARIABLE_NAME}`.
-
-**Substitution rules:**
-
-- The `VARIABLE_NAME` MUST match a key in the manifest's `config` object.
-- Substitution occurs at install time (when templates are rendered to their final form).
-- A template variable referencing an undefined config key MUST cause an error during installation.
-- Literal `${` sequences that should not be substituted MUST be escaped as `$${`.
+Template variables in `.mcp.json` and `.lsp.json` files use the syntax `${config.VARIABLE_NAME}`. The substitution rules defined in [MCP Servers > Variable Substitution](#variable-substitution) apply. Substitution occurs at install time when templates are rendered to their final form.
 
 ---
 
@@ -923,12 +921,6 @@ The host MUST NOT read full `SKILL.md`, `AGENT.md`, or command file contents at 
 | MCP server | First tool invocation targeting the server | Server process started |
 | LSP server | First file opened matching the server's language scope | Server process started |
 
-### Benefits
-
-- **Reduced startup time.** Only metadata (~100 tokens per package) is loaded at startup, regardless of the number of installed packages.
-- **Lower token consumption.** Full component content is loaded only when relevant, preserving context window budget.
-- **Scalability.** Users can install many packages without degrading session startup performance.
-
 ---
 
 ## Registry Protocol
@@ -1011,15 +1003,7 @@ When a user installs a package by name (e.g., `ccpkg install api-testing`):
 3. If multiple versions match, the highest semver version is selected.
 4. If the same name and version appear in multiple registries, the first registry in the configuration list takes precedence.
 
-### Hosting Options
-
-A registry can be:
-
-- A **static JSON file** hosted on GitHub Pages, S3, or any HTTP server.
-- A **dynamic API** that returns the same JSON format.
-- A **local file** for offline or private use.
-
-Registries SHOULD serve their index over HTTPS. Installers SHOULD warn when fetching from non-HTTPS sources.
+Registry URLs MUST use HTTPS (see [Transport Security](#transport-security)).
 
 ---
 
@@ -1031,7 +1015,13 @@ Registries SHOULD serve their index over HTTPS. Installers SHOULD warn when fetc
 - Installers MUST reject archives containing path traversal sequences (`../`) in any entry path.
 - Installers MUST validate that all paths referenced in the manifest exist within the archive.
 
+### Transport Security
+
+- All remote fetches (archive downloads, registry queries, referenced mcpb bundles) MUST use HTTPS. Installers MUST reject non-HTTPS URLs for remote resources.
+
 ### Checksum Verification
+
+Checksums provide integrity verification — they detect accidental corruption and transmission errors, not deliberate tampering. Cryptographic package signing is deferred to a future specification version (see [Supply Chain](#supply-chain)).
 
 - Installers SHOULD compute and verify SHA-256 checksums for all downloaded archives.
 - If a manifest `checksum` field is present, the installer MUST verify it. A mismatch MUST abort installation.
@@ -1046,8 +1036,7 @@ Registries SHOULD serve their index over HTTPS. Installers SHOULD warn when fetc
 
 ### Hook Safety
 
-- Hook scripts execute with the user's operating system permissions.
-- Users SHOULD review hook scripts before installing packages that declare hooks.
+- Hook scripts execute with the user's operating system permissions. Hooks have full access to the user's filesystem and processes. Users MUST review hook scripts from untrusted sources before installation.
 - Installers SHOULD display hook scripts for user review during installation.
 - Hosts SHOULD apply timeouts to hook execution to prevent runaway processes.
 
@@ -1067,12 +1056,12 @@ ccpkg achieves cross-tool portability by building on universal open standards an
 
 The following components are tool-agnostic and work across any host that supports the underlying standard:
 
-| Component | Standard | Portability |
-|---|---|---|
-| Skills (`SKILL.md`) | [Agent Skills](https://agentskills.io/specification) | Adopted by Claude Code, Codex CLI, and other AI assistants |
-| MCP servers (`.mcp.json`) | [Model Context Protocol](https://modelcontextprotocol.io) | Universal protocol for LLM tool integration |
-| LSP servers (`.lsp.json`) | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) | Universal protocol for language intelligence |
-| Config schema | [JSON Schema](https://json-schema.org/) | Universal validation standard |
+| Component | Standard |
+|---|---|
+| Skills (`SKILL.md`) | [Agent Skills](https://agentskills.io/specification) |
+| MCP servers (`.mcp.json`) | [Model Context Protocol](https://modelcontextprotocol.io) |
+| LSP servers (`.lsp.json`) | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) |
+| Config schema | [JSON Schema](https://json-schema.org/) |
 
 ### Tool-Specific Adapters
 
@@ -1151,4 +1140,4 @@ The following package names are reserved and MUST NOT be used by third-party pac
 
 ---
 
-*This specification is published under the terms of the project's license. For the latest version, see the [ccpkg repository](https://github.com/zircote/plugin-packaging).*
+*This specification is published under the terms of the project's license. For the latest version, see the [ccpkg repository](https://github.com/zircote/ccpkg).*
