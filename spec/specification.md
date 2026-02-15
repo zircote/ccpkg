@@ -799,6 +799,31 @@ Template variables use the syntax `${config.VARIABLE_NAME}`. The variable name M
 - If an optional config variable is missing and has a default, the default MUST be used.
 - If an optional config variable is missing and has no default, the template variable MUST be replaced with an empty string.
 
+**Server Deduplication:**
+
+When installing a package that declares an MCP server already present in the host configuration, the installer SHOULD deduplicate rather than creating a duplicate entry.
+
+**Server Identity.** An MCP server's identity is a tuple of (key_name, origin):
+
+- **key_name**: The key in the `mcpServers` object (e.g., `"context7"`).
+- **origin**: Derived from the server mode:
+  - Mode 1 (command+args): `command::{command} {args[0]}` (e.g., `command::npx -y @anthropic/context7-mcp`).
+  - Mode 2 (embedded mcpb): `bundle::{bundle_path}` normalized to the archive-relative path.
+  - Mode 3 (referenced mcpb): the `source` URL verbatim.
+
+Two servers are considered the same when both key_name and origin match.
+
+**Version Resolution.** Version is extracted from the origin where possible (npm package version, URL path segment, mcpb metadata).
+
+- Same identity, incoming version higher: replace. Re-render MCP config from the incoming package's template.
+- Same identity, incoming version equal or lower: skip rendering. Track in lockfile only.
+- Same key_name, different origin: conflict. The installer MUST warn the user. In interactive mode, the installer SHOULD offer to keep the existing server, replace it, or install both under distinct keys.
+
+**User Override.** Deduplication is the default behavior. Installers MUST provide a mechanism for users to override deduplication:
+
+- A global flag (e.g., `--no-dedup`) that bypasses all MCP deduplication for the current install operation.
+- A per-server override stored in the lockfile's `shared_mcp_servers` entry (`"dedup": false`). When dedup is disabled for a server, each package gets its own independent copy.
+
 ### LSP Servers
 
 LSP (Language Server Protocol) server configurations enable packages to provide language intelligence features such as diagnostics, completions, and code actions.
