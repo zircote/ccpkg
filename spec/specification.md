@@ -1257,4 +1257,34 @@ The following package names are reserved and MUST NOT be used by third-party pac
 
 ---
 
+## Appendix D: Future Host Integration Targets
+
+The following features are **not currently implementable** without changes to the host application (Claude Code). They are documented here as aspirational targets to guide future host development. ccpkg implementations MUST NOT depend on these features and MUST NOT claim to provide them.
+
+### D.1 Hot-Reload After Install
+
+**Description:** Components become available immediately after install without requiring a session restart.
+
+**Requires:** A host API or file-watch mechanism to detect new plugins mid-session and load them into the running context.
+
+**Current behavior:** The host reads `installed_plugins.json` and scans plugin directories at session startup only. Changes to plugin registration take effect on the next session start. The installer informs the user that a restart is required.
+
+### D.2 Host-Aware Lockfile Loading
+
+**Description:** The host reads `ccpkg-lock.json` at startup for optimized package discovery, enabling faster startup by skipping directory scanning for known packages.
+
+**Requires:** The host application to understand the ccpkg lockfile format and use it as a package index.
+
+**Current behavior:** The host discovers packages via `extraKnownMarketplaces` and standard plugin directory scanning. The ccpkg lockfile is used only by the ccpkg installer for lifecycle management (install, update, uninstall), not by the host.
+
+### D.3 Runtime Component State Machine
+
+**Description:** Components track lifecycle states (Idle -> Active -> Idle) with host-managed activation tracking per component.
+
+**Requires:** Host-managed activation state tracking, event emission for component transitions, and an API for querying component state.
+
+**Current behavior:** Components are either installed (files exist in the plugin directory and the plugin is enabled) or not. There is no intermediate state. The host loads component content on demand but does not expose activation state to external tools.
+
+---
+
 *This specification is published under the terms of the project's license. For the latest version, see the [ccpkg repository](https://github.com/zircote/ccpkg).*
