@@ -1497,6 +1497,28 @@ The following components are tool-agnostic and work across any host that support
 | LSP servers (`.lsp.json`) | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) |
 | Config schema | [JSON Schema](https://json-schema.org/) |
 
+### Component Portability Matrix
+
+The following matrix indicates the portability status of each component type across known hosts. This is informational — hosts not listed here may support any subset of components.
+
+| Component | Claude Code | Copilot | Codex CLI | Gemini CLI | OpenCode |
+|---|---|---|---|---|---|
+| Skills (SKILL.md) | Native | Via instructions | Native | Native | Native |
+| MCP servers | Native | Native (COPILOT_MCP_ prefix) | Native | Native | Native |
+| LSP servers | Native (via plugins) | Not supported | Not supported | Experimental (TS/JS) | Experimental (27+ languages) |
+| Hooks | Native (14 events) | Native (6 events) | Minimal (2 events) | Native (11 events) | Plugin hooks (TypeScript) |
+| Agents (AGENT.md) | Native | Native (.github/agents/) | Not supported | Experimental (sub-agents) | Native (custom agents) |
+| Commands | Native | Not supported | Deprecated (prompts) | Native (TOML files) | Native (Markdown files) |
+| Instructions | CLAUDE.md | .github/copilot-instructions.md | AGENTS.md | GEMINI.md (configurable) | AGENTS.md (fallback: CLAUDE.md) |
+
+**Key:**
+- **Native**: Component type is natively supported by the host
+- **Via [mechanism]**: Component concept maps to a different host mechanism (adapter needed)
+- **Not supported**: Host has no equivalent; component is silently skipped
+- **Partial**: Some features of the component type work; others do not
+
+Package authors SHOULD use per-component host scoping (see [Components Object](#components-object)) to include host-specific variants of components. Authors SHOULD NOT assume all hosts support all component types.
+
 ### Tool-Specific Adapters
 
 The following mechanisms handle tool-specific differences:
@@ -1507,12 +1529,19 @@ The following mechanisms handle tool-specific differences:
 
 3. **Hooks.** Hook event types and execution semantics are host-specific. Hosts MUST silently ignore unrecognized event types, enabling packages to include hooks for multiple hosts without conflict.
 
+4. **Per-component host scoping.** The `hosts` field in structured component declarations limits a component to specific hosts. Installers silently skip components not targeted at the active host.
+
 ### Portability Guidelines for Authors
 
 - Use `INSTRUCTIONS.md` and `mappings.json` for instructions. Do not hardcode tool-specific filenames.
 - Prefer MCP for tool integration over host-specific mechanisms.
 - Use the `compatibility` field to declare minimum host versions rather than excluding hosts.
 - Test packages across multiple hosts when possible.
+- Use per-component `hosts` scoping to include host-specific hooks or agents alongside universal skills.
+- When targeting Copilot, note that MCP server credentials are injected via `COPILOT_MCP_` environment variables. Use `targets.copilot.mcp_env_prefix` to declare this.
+- Hooks are the most portable after Skills and MCP — four of five hosts (Claude Code, Copilot, Gemini CLI, OpenCode) have native hook systems. Codex CLI has minimal support (two events only). Use canonical event names for maximum portability.
+- Agents are not yet portable across hosts. Each host uses a different agent definition format and execution model. Scope agents to specific hosts via the `hosts` field.
+- LSP servers are only natively supported by Claude Code. Gemini CLI and OpenCode have experimental support. Scope LSP components to supported hosts.
 
 ---
 
