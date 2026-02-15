@@ -751,9 +751,10 @@ sequenceDiagram
     Installer->>Installer: Extract archive to install location
     Installer->>Installer: Render templates (variable substitution)
     Installer->>Installer: Store config values in host settings
+    Installer->>Installer: Generate .claude-plugin/plugin.json
+    Installer->>Host: Add to enabledPlugins in settings.json
     Installer->>Installer: Update lockfile
-    Installer->>Host: Register components
-    Host->>User: Components available (no restart required)
+    Installer->>User: Installation complete. Restart session to activate.
 ```
 
 ### Step Details
@@ -778,8 +779,8 @@ sequenceDiagram
    - Default: `user`.
 
 9. **Extract archive.** The installer extracts the archive contents to the install location:
-   - **User scope:** `~/.claude/packages/{name}/`
-   - **Project scope:** `{project-root}/.claude/packages/{name}/`
+   - **User scope:** `~/.ccpkg/plugins/{name}/`
+   - **Project scope:** `{project-root}/.ccpkg/plugins/{name}/`
 
    If a previous version exists at the install location, the installer MUST remove it before extraction.
 
@@ -787,18 +788,24 @@ sequenceDiagram
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
-12. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root. See [Lockfile Format](#lockfile-format).
+12. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the install directory from the ccpkg manifest metadata. The mapping is: manifest `name` → plugin.json `name`, manifest `version` → plugin.json `version`, manifest `description` → plugin.json `description`, manifest `author` → plugin.json `author`.
 
-13. **Register components.** The installer notifies the host of newly available components. Components SHOULD be available immediately without requiring a session restart.
+13. **Register with host.** The installer adds `{name}@ccpkg` to the `enabledPlugins` object in the host's settings file (`settings.json`). This registers the package as an enabled plugin for the host to discover on next session start.
+
+14. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root (e.g., `~/.ccpkg/ccpkg-lock.json` for user scope). See [Lockfile Format](#lockfile-format).
+
+15. **Notify user.** The installer writes the plugin to the host's plugin directory and registers it in the host's settings. Components become available on the next session start. Hot-reload of components mid-session is a future host integration target (see [Appendix D](#appendix-d-future-host-integration-targets)).
 
 ### Uninstall
 
 Uninstalling a package reverses the install process:
 
-1. Remove the package directory from the install location.
-2. Remove the package entry from the lockfile.
-3. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
-4. Deregister components from the host.
+1. **Remove the package directory** from the install location (`~/.ccpkg/plugins/{name}/` or `{project-root}/.ccpkg/plugins/{name}/`).
+2. **Remove from enabledPlugins.** Remove the `{name}@ccpkg` entry from the host's `enabledPlugins` in `settings.json`.
+3. **Remove merged MCP servers.** Remove any MCP server entries that were merged into `.mcp.json` during install (tracked in the lockfile's `merged_mcp_servers` field).
+4. **Remove lockfile entry.** Remove the package entry from `ccpkg-lock.json`.
+5. **Remove config values.** Remove config values from host settings. Secrets SHOULD require explicit user confirmation before removal.
+6. **Notify user.** Inform the user that a session restart is required to fully deactivate the package's components.
 
 ### Update
 
@@ -814,19 +821,31 @@ The update process:
 
 An installer SHOULD provide an `outdated` command that checks configured registries and reports available updates without applying them.
 
-### Dev Mode (Link)
+### Dev Mode (Link / Unlink)
 
-Installers SHOULD support a dev mode that creates a symbolic link from the packages directory to a local source directory. This allows package authors to iterate on skills, hooks, and commands without re-packing after every change.
+Installers SHOULD support a dev mode that creates a symbolic link from the plugins directory to a local source directory. This allows package authors to iterate on skills, hooks, and commands without re-packing after every change.
 
-The link process:
+#### Link
 
-1. User invokes link with a path to a local package directory.
-2. Installer validates that the directory contains a valid `manifest.json`.
-3. A symbolic link is created at the install location pointing to the local directory.
-4. The lockfile records the package with `"source": "link:{absolute-path}"`.
-5. Components are registered normally. Changes to the linked directory take effect immediately.
+1. **Validate source.** The installer validates that the target directory contains a valid `manifest.json`.
+2. **Collect config values.** The installer prompts for any required config values, same as a normal install.
+3. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the source directory from the manifest metadata (same mapping as install step 12).
+4. **Create symlink.** A symbolic link is created at `~/.ccpkg/plugins/{name}` pointing to the source directory.
+5. **Register with host.** The installer adds `{name}@ccpkg` to `enabledPlugins` in the host's settings, renders templates, and stores config values.
+6. **Update lockfile.** The lockfile records the package with `"source": "link:{absolute-path}"`, `"linked": true`, and `"generated_plugin_json": true` (if the `.claude-plugin/plugin.json` was created by ccpkg rather than pre-existing).
 
-Linked packages MUST be distinguishable from installed archives in listings and status output. The `unlink` operation removes the symlink and lockfile entry without deleting the source directory.
+#### Unlink
+
+1. **Remove symlink.** Remove the symlink from `~/.ccpkg/plugins/{name}`.
+2. **Clean up generated files.** If the lockfile entry has `"generated_plugin_json": true`, remove the `.claude-plugin/` directory from the source directory. If the plugin.json was pre-existing (not generated by ccpkg), leave it in place.
+3. **Deregister from host.** Remove `{name}@ccpkg` from `enabledPlugins` and remove the lockfile entry.
+4. **Preserve source.** The source directory itself MUST NOT be deleted.
+
+Linked packages MUST be distinguishable from installed archives in listings and status output.
+
+#### Session-Only Testing
+
+For quick one-off testing without any persistent side effects, developers can use the host's `--plugin-dir` CLI flag (e.g., `claude --plugin-dir ~/Projects/my-plugin`). This loads the plugin for a single session only — no symlinks, no lockfile entries, no settings modifications.
 
 ---
 
