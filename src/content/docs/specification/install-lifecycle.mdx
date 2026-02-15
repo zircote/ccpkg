@@ -85,9 +85,17 @@ sequenceDiagram
 Uninstalling a package reverses the install process:
 
 1. Remove the package directory from the install location.
-2. Remove the package entry from the lockfile.
-3. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
-4. Deregister components from the host.
+2. Remove or reassign MCP servers. For each MCP server the package declared:
+
+   a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
+
+   b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-extract its MCP template from the archive cache, re-render with that package's config values, and update `active_source`. If this package was not the active source, no config change is needed.
+
+   c. If the server has `dedup: false`: remove only this package's copy. Other packages' copies are independent and unaffected.
+
+3. Remove the package entry from the lockfile.
+4. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
+5. Deregister components from the host.
 
 ## Update
 

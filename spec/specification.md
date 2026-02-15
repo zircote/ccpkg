@@ -1085,7 +1085,13 @@ Uninstalling a package reverses the install process:
 
 1. **Remove the package directory** from the install location (`~/.ccpkg/plugins/{name}/` or `{project-root}/.ccpkg/plugins/{name}/`).
 2. **Remove from enabledPlugins.** Remove the `{name}@ccpkg` entry from the host's `enabledPlugins` in `settings.json`.
-3. **Remove merged MCP servers.** Remove any MCP server entries that were merged into `.mcp.json` during install (tracked in the lockfile's `merged_mcp_servers` field).
+3. **Remove or reassign MCP servers.** For each MCP server the package declared:
+
+   a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
+
+   b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-extract its MCP template from the archive cache, re-render with that package's config values, and update `active_source`. If this package was not the active source, no config change is needed.
+
+   c. If the server has `dedup: false`: remove only this package's copy. Other packages' copies are independent and unaffected.
 4. **Remove lockfile entry.** Remove the package entry from `ccpkg-lock.json`.
 5. **Remove config values.** Remove config values from host settings. Secrets SHOULD require explicit user confirmation before removal.
 6. **Notify user.** Inform the user that a session restart is required to fully deactivate the package's components.
