@@ -1,31 +1,33 @@
 ---
 title: "Lazy Loading"
-description: "Startup behavior and on-demand component loading for minimal session overhead."
+description: "Aspirational lazy loading behavior for on-demand component activation."
 ---
 
-# Lazy Loading
+# Lazy Loading (Aspirational)
 
-Lazy loading minimizes startup overhead by deferring component activation until the component is actually needed.
+Lazy loading is a **future host integration target**, not a current normative requirement. It is documented here to guide host development and package authoring best practices. See [Appendix D](/specification/appendices/) for other aspirational features.
 
-## Startup Behavior
+ccpkg implementations MUST NOT depend on lazy loading and MUST NOT claim to provide it. Packages should be structured to benefit from whatever lazy loading the host provides natively.
 
-At session start, the host performs the following:
+## Ideal Behavior
 
-1. Read the lockfile(s) (user and project scope).
-2. For each installed package, load **only** the manifest metadata: `name`, `description`, and the `components` declaration.
-3. Register skill and agent names and descriptions for discovery (so the LLM can decide when to activate them).
-4. Register command names and descriptions for slash-command completion.
-5. Register hook event bindings (but do not execute hook scripts).
-
-The host MUST NOT read full `SKILL.md`, `AGENT.md`, or command file contents at startup.
+Only package metadata is loaded at session startup. Full component content (SKILL.md bodies, AGENT.md bodies, command files) is deferred until the component is actually invoked. This minimizes startup time and context token consumption.
 
 ## On-Demand Loading
 
 | Component | Trigger | What Is Loaded |
 |---|---|---|
-| Skill | LLM decides to activate the skill based on name/description | Full `SKILL.md` body, then `scripts/` and `references/` as needed |
-| Agent | User or LLM activates the agent | Full `AGENT.md` body |
+| Skill | LLM activates based on name/description | Full SKILL.md body |
+| Agent | User or LLM activates the agent | Full AGENT.md body |
 | Command | User invokes the slash command | Full command file content |
-| Hook | Host event fires matching the hook's event type | Hook script executed |
+| Hook | Host event fires matching the event type | Hook script executed |
 | MCP server | First tool invocation targeting the server | Server process started |
-| LSP server | First file opened matching the server's language scope | Server process started |
+| LSP server | First file matching the language scope | Server process started |
+
+## Current Behavior
+
+Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading.
+
+## What This Requires
+
+A host-level mechanism to index component metadata (name, description, type) separately from component content, and to load full content on demand at invocation time. No host currently provides this as a general-purpose API.

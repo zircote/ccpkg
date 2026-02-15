@@ -100,17 +100,17 @@ Bundles (like Approach A) plus a manifest index file and a lockfile for version 
 
 **Pros**: Adds reproducibility via lockfile. Enables basic discovery through the index.
 
-**Cons**: More complex than A without fully solving the problems. The registry is local-only, so discovery is still limited. No lazy loading.
+**Cons**: More complex than A without fully solving the problems. The registry is local-only, so discovery is still limited. No deferred component loading.
 
 ### Approach C: Lazy Bundle (Selected)
 
-Archive bundles + lockfile + lazy loading + optional decentralized registries + checksum verification.
+Archive bundles + lockfile + optional decentralized registries + checksum verification.
 
 **Pros**: Directly targets all three pain points. Builds on the proven mcpb archive pattern. Borrows lazy.nvim's best ideas (deferred loading + lockfiles). Keeps registries optional and decentralized (Homebrew tap model meets Terraform registry protocol). Checksum verification adds the trust layer.
 
 **Cons**: Largest design surface. More to implement. But the complexity maps 1:1 to real problems -- there is no accidental complexity here.
 
-**Selected Approach C.** The additional complexity over A and B is justified because each added component (lazy loading, lockfile, registry protocol) directly eliminates a specific user pain point.
+**Selected Approach C.** The additional complexity over A and B is justified because each added component (lockfile, registry protocol, checksum verification) directly eliminates a specific user pain point.
 
 ---
 
@@ -132,7 +132,7 @@ ccpkg itself is a Claude Code plugin. It uses all four extension types available
 
 - **Skills** for interactive, agentic operations (init wizard, search, describe). These are conversational -- Claude adapts its responses based on context.
 - **Commands** for deterministic operations (`/ccpkg:install`, `/ccpkg:pack`, `/ccpkg:verify`). Same input, same behavior, every time.
-- **Hooks** for enforcement (PostSessionStart lazy loading, integrity verification on install). These run without LLM interpretation.
+- **Hooks** for enforcement (integrity verification on install). These run without LLM interpretation.
 - **Scripts** (Node.js) for heavy lifting (ZIP handling, SHA256 checksums, lockfile resolution, cache management). Hooks and commands delegate to scripts for anything computationally intensive.
 
 **Why this split?** Each extension type has a natural role. Using the wrong type creates friction: a skill that should be deterministic frustrates users with inconsistent behavior. A command that should be conversational cannot adapt to context. A hook that invokes the LLM adds latency to every session start. The four-type split matches each operation to its natural execution model.
@@ -269,7 +269,7 @@ The ccpkg manager is itself a Claude Code plugin. This is not a gimmick -- it va
 
 - **Commands**: `/ccpkg:init`, `/ccpkg:pack`, `/ccpkg:install`, `/ccpkg:verify`, `/ccpkg:list`, `/ccpkg:update`, `/ccpkg:config`, `/ccpkg:search`
 - **Skills**: Interactive init wizard (guides authors through manifest creation), package discovery and search
-- **Hooks**: `PostSessionStart` for lazy loading installed packages, integrity verification on install
+- **Hooks**: integrity verification on install
 - **Scripts**: Node.js/TypeScript for ZIP handling, SHA256 checksum computation, lockfile resolution, cache management, registry queries
 
 ### Technology choices

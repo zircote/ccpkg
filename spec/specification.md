@@ -51,13 +51,11 @@ The following principles guide the design of the ccpkg format. Implementors SHOU
 
 3. **Deterministic installation.** Installation MUST be deterministic. Given the same package archive and the same user configuration, the installed result MUST be identical.
 
-4. **Lazy loading.** Installers SHOULD support lazy loading. Only package metadata is loaded at session startup; full component content is loaded on demand when invoked. This minimizes startup time and context token consumption.
+4. **No central authority.** No central registry is REQUIRED. Packages MAY be distributed via any URL, file path, or registry. Registries are optional and additive.
 
-5. **No central authority.** No central registry is REQUIRED. Packages MAY be distributed via any URL, file path, or registry. Registries are optional and additive.
+5. **Separated configuration.** User configuration MUST be separated from package contents. Secrets, preferences, and environment-specific values live outside the archive and are injected at install or load time.
 
-6. **Separated configuration.** User configuration MUST be separated from package contents. Secrets, preferences, and environment-specific values live outside the archive and are injected at install or load time.
-
-7. **No install-time code execution.** Packages MUST NOT execute arbitrary code during installation. There are no postinstall scripts, no build steps, and no setup hooks. The installation process is purely declarative: extract, configure, register.
+6. **No install-time code execution.** Packages MUST NOT execute arbitrary code during installation. There are no postinstall scripts, no build steps, and no setup hooks. The installation process is purely declarative: extract, configure, register.
 
 8. **No inter-package dependencies.** Inter-package dependencies are explicitly out of scope for this specification version. Each package MUST be self-contained and MUST NOT declare dependencies on other ccpkg packages. If a skill requires an MCP server, both MUST be packaged together in a single `.ccpkg` archive.
 
@@ -90,7 +88,7 @@ flowchart LR
 | **Package Author** | Creates the `.ccpkg` archive containing components and a manifest. Authors are responsible for correctness, licensing, and security of package contents. |
 | **Registry** | An OPTIONAL service or static file that indexes available packages. Registries provide discovery and version resolution but are not required for installation. |
 | **Installer** | The tool or skill that processes `.ccpkg` archives. The installer downloads, verifies, extracts, configures, and registers packages. The ccpkg skill itself serves as the reference installer implementation. |
-| **Host** | The AI coding assistant (e.g., Claude Code, Codex CLI) that loads and uses installed components. The host is responsible for component activation, lazy loading, and runtime integration. |
+| **Host** | The AI coding assistant (e.g., Claude Code, Codex CLI) that loads and uses installed components. The host is responsible for component activation and runtime integration. |
 | **User** | The person who installs and uses packages. Users provide configuration values, approve hook scripts, and control what packages are active. |
 
 ### Component Lifecycle
@@ -1095,7 +1093,7 @@ For quick one-off testing without any persistent side effects, developers can us
 
 ## Host Integration
 
-ccpkg integrates with Claude Code's plugin system to provide namespaced installation and component discovery. Rather than placing files directly in user-level directories (where namespacing is unavailable), ccpkg installs packages as Claude Code plugins and leverages the host's existing plugin runtime for component registration, namespace isolation, and lazy loading.
+ccpkg integrates with Claude Code's plugin system to provide namespaced installation and component discovery. Rather than placing files directly in user-level directories (where namespacing is unavailable), ccpkg installs packages as Claude Code plugins and leverages the host's existing plugin runtime for component registration and namespace isolation.
 
 ### Bootstrap
 
@@ -1274,31 +1272,6 @@ The lockfile records the state of all installed packages at a given scope. It en
 - An installer MAY provide a `ccpkg restore` command that reads the lockfile and installs all listed packages at their recorded versions.
 
 ---
-
-## Lazy Loading
-
-Lazy loading minimizes startup overhead by deferring component activation until the component is actually needed.
-
-### Startup Behavior
-
-Claude Code already implements lazy loading for skills: frontmatter metadata (name and description) is loaded at startup for discovery, while the full SKILL.md body is loaded on invocation via the Skill tool. This same pattern applies to other component types.
-
-ccpkg leverages this existing behavior by placing well-formed component files (SKILL.md, AGENT.md, commands, hooks) in standard plugin directories. No custom host-level lockfile reader is required — the host discovers ccpkg plugins via `extraKnownMarketplaces` → directory source → standard plugin component discovery.
-
-At session start, the host scans the `~/.ccpkg/plugins/` directory (registered via `extraKnownMarketplaces`), reads each plugin's `.claude-plugin/plugin.json`, and indexes component metadata for discovery. Full component content is deferred until invocation.
-
-### On-Demand Loading
-
-| Component | Trigger | What Is Loaded |
-|---|---|---|
-| Skill | LLM decides to activate the skill based on name/description | Full `SKILL.md` body, then `scripts/` and `references/` as needed |
-| Agent | User or LLM activates the agent | Full `AGENT.md` body |
-| Command | User invokes the slash command | Full command file content |
-| Hook | Host event fires matching the hook's event type | Hook script executed |
-| MCP server | First tool invocation targeting the server | Server process started |
-| LSP server | First file opened matching the server's language scope | Server process started |
-
-> **Note:** These behaviors are provided by the host application's existing plugin runtime. ccpkg does not implement a custom lazy loading mechanism.
 
 ---
 
@@ -1718,6 +1691,25 @@ The following features are **not currently implementable** without changes to th
 **Requires:** Host-managed activation state tracking, event emission for component transitions, and an API for querying component state.
 
 **Current behavior:** Components are either installed (files exist in the plugin directory and the plugin is enabled) or not. There is no intermediate state. The host loads component content on demand but does not expose activation state to external tools.
+
+### D.4 Lazy Loading
+
+**Description:** Only package metadata is loaded at session startup. Full component content (SKILL.md bodies, AGENT.md bodies, command files) is deferred until the component is actually invoked. This minimizes startup time and context token consumption.
+
+**Requires:** A host-level mechanism to index component metadata (name, description, type) separately from component content, and to load full content on demand at invocation time.
+
+**Ideal behavior:** At session start, the host reads only frontmatter or manifest-level metadata for each installed component. When a skill is activated, the full SKILL.md body is loaded. When a command is invoked, the full command file is read. MCP and LSP servers start their processes only on first relevant invocation.
+
+| Component | Trigger | What Is Loaded |
+|---|---|---|
+| Skill | LLM activates based on name/description | Full SKILL.md body |
+| Agent | User or LLM activates the agent | Full AGENT.md body |
+| Command | User invokes the slash command | Full command file content |
+| Hook | Host event fires matching the event type | Hook script executed |
+| MCP server | First tool invocation targeting the server | Server process started |
+| LSP server | First file matching the language scope | Server process started |
+
+**Current behavior:** Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it.
 
 ---
 
