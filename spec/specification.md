@@ -1278,6 +1278,95 @@ When a user installs a package by name (e.g., `ccpkg install api-testing`):
 
 Registry URLs MUST use HTTPS (see [Transport Security](#transport-security)).
 
+### Version Discovery
+
+Registries SHOULD provide a version endpoint that enables efficient update checking without downloading the full index.
+
+**Version endpoint format:**
+
+A registry MAY expose per-package version information at a predictable URL derived from the registry base URL:
+
+```
+{registry-base-url}/packages/{name}/versions.json
+```
+
+**Response schema:**
+
+```json
+{
+  "name": "api-testing",
+  "latest": "2.1.0",
+  "versions": [
+    {
+      "version": "2.1.0",
+      "published_at": "2026-03-01T12:00:00Z",
+      "checksum": "sha256:...",
+      "url": "https://..."
+    },
+    {
+      "version": "2.0.0",
+      "published_at": "2026-02-15T12:00:00Z",
+      "checksum": "sha256:...",
+      "url": "https://..."
+    }
+  ]
+}
+```
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | REQUIRED | `string` | Package name |
+| `latest` | REQUIRED | `string` | Latest stable version (semver) |
+| `versions` | REQUIRED | `array` | All published versions, newest first |
+
+Each version entry uses the same fields as a registry package entry.
+
+Registries SHOULD support `ETag` and `If-None-Match` headers to enable efficient polling. An installer that checks for updates SHOULD cache responses and use conditional requests to minimize bandwidth.
+
+### Security Advisories
+
+Registries MAY publish security advisories for packages. An advisory indicates that one or more versions of a package have a known vulnerability.
+
+**Advisory endpoint format:**
+
+```
+{registry-base-url}/advisories.json
+```
+
+**Response schema:**
+
+```json
+{
+  "advisories": [
+    {
+      "id": "CCPKG-2026-001",
+      "package": "vulnerable-pkg",
+      "affected_versions": "<1.2.3",
+      "severity": "high",
+      "title": "Command injection in hook script",
+      "description": "...",
+      "fixed_in": "1.2.3",
+      "published_at": "2026-03-01T00:00:00Z",
+      "url": "https://..."
+    }
+  ]
+}
+```
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `id` | REQUIRED | `string` | Unique advisory identifier |
+| `package` | REQUIRED | `string` | Affected package name |
+| `affected_versions` | REQUIRED | `string` | Semver range of affected versions |
+| `severity` | REQUIRED | `string` | One of: `critical`, `high`, `medium`, `low` |
+| `title` | REQUIRED | `string` | Short description of the vulnerability |
+| `description` | OPTIONAL | `string` | Detailed description |
+| `fixed_in` | OPTIONAL | `string` | Version that fixes the vulnerability |
+| `published_at` | REQUIRED | `string` | ISO 8601 timestamp |
+| `url` | OPTIONAL | `string` | Link to full advisory details |
+
+Installers that support update discovery SHOULD check the advisory endpoint and SHOULD surface advisories affecting installed packages. The urgency of notification is an implementation concern.
+
 ---
 
 ## Security Considerations
