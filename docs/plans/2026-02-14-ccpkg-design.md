@@ -374,6 +374,18 @@ The ccpkg format targets multiple AI coding assistant hosts, but each host has f
 2. **Template language with conditionals** -- Use a templating syntax (e.g., Handlebars, Jinja) with `{{#if host == "claude"}}` blocks. Powerful but introduces a template engine dependency, makes the raw files hard to read, and is overkill for what is typically "shared base + small per-host additions." Rejected for complexity.
 3. **mappings.json only (previous design)** -- Map a single canonical file to host-specific filenames without any content variation. Already proven insufficient — the filename mapping exists via `targets.*.instructions_file`, but the content is identical everywhere. Superseded by the assembly model which adds content variation on top of filename mapping.
 
+### 16. MCP server deduplication at install time
+
+When multiple packages bundle the same MCP server, the installer deduplicates at install time rather than requiring packages to declare shared dependencies or a shared MCP directory.
+
+**Why install-time dedup?** Packages stay self-contained. Authors do not need to change anything. The dedup is transparent -- the installer is smarter about what it writes to the host config. This preserves Principle #1 (self-contained) and Principle #8 (no inter-package deps).
+
+**Why not shared directory with refcounting?** Reference counting introduces a new complexity vector. Crashes mid-uninstall corrupt counts. It breaks the "each plugin is self-contained in its directory" model hosts expect.
+
+**Why not a server_id manifest field?** Requires schema change and author adoption. Existing packages would not benefit. The key_name + origin tuple provides sufficient identity without opt-in.
+
+**Identity model:** (key_name, origin) tuple. Origin is derived from server mode: command string for Mode 1, bundle path for Mode 2, source URL for Mode 3. Version resolution: highest wins. User override: per-server or global.
+
 ---
 
 ## Relationship to Existing Specifications
