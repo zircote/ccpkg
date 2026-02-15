@@ -6,11 +6,11 @@ nav_order: 3
 
 # ccpkg Design Document
 
-| Field   | Value        |
+| Field | Value |
 |---------|--------------|
-| Date    | 2026-02-14   |
-| Status  | Draft        |
-| Authors | Allen R.     |
+| Date | 2026-02-14 |
+| Status | Draft |
+| Authors | Allen R. |
 
 ---
 
@@ -161,11 +161,11 @@ Plugins frequently need configuration: API keys, file paths, feature flags, serv
 
 ```json
 {
-  "config": {
-    "API_KEY": { "type": "secret", "required": true, "description": "Service API key" },
-    "MAX_RESULTS": { "type": "number", "default": 10 },
-    "OUTPUT_FORMAT": { "type": "enum", "values": ["json", "text"], "default": "json" }
-  }
+ "config": {
+ "API_KEY": { "type": "secret", "required": true, "description": "Service API key" },
+ "MAX_RESULTS": { "type": "number", "default": 10 },
+ "OUTPUT_FORMAT": { "type": "enum", "values": ["json", "text"], "default": "json" }
+ }
 }
 ```
 
@@ -258,14 +258,14 @@ ccpkg packages install as Claude Code plugins. This is the fundamental integrati
 
 ```json
 {
-  "extraKnownMarketplaces": {
-    "ccpkg": {
-      "source": {
-        "source": "directory",
-        "path": "~/.ccpkg/plugins"
-      }
-    }
-  }
+ "extraKnownMarketplaces": {
+ "ccpkg": {
+ "source": {
+ "source": "directory",
+ "path": "~/.ccpkg/plugins"
+ }
+ }
+ }
 }
 ```
 
@@ -362,7 +362,7 @@ The ccpkg format targets multiple AI coding assistant hosts, but each host has f
 
 ---
 
-### 15. Instructions Assembly — Base + Per-Host Overlays
+### 15. Instructions Assembly. Base + Per-Host Overlays
 
 **Decision**: The `components.instructions` field supports both a simple string form (single file) and a structured form declaring a base file with optional per-host overlay files. Overlays declare their assembly position (`append`, `prepend`, or `insert` at a named marker) via YAML frontmatter. The installer assembles the final instructions output per host at install time.
 
@@ -372,7 +372,7 @@ The ccpkg format targets multiple AI coding assistant hosts, but each host has f
 
 1. **Separate instruction files per host** -- Each host gets its own complete file (`claude-instructions.md`, `copilot-instructions.md`). Simple to implement but leads to content duplication. When shared content changes, authors must update N files. Rejected because it undermines the DRY principle and scales poorly with host count.
 2. **Template language with conditionals** -- Use a templating syntax (e.g., Handlebars, Jinja) with `{{#if host == "claude"}}` blocks. Powerful but introduces a template engine dependency, makes the raw files hard to read, and is overkill for what is typically "shared base + small per-host additions." Rejected for complexity.
-3. **mappings.json only (previous design)** -- Map a single canonical file to host-specific filenames without any content variation. Already proven insufficient — the filename mapping exists via `targets.*.instructions_file`, but the content is identical everywhere. Superseded by the assembly model which adds content variation on top of filename mapping.
+3. **mappings.json only (previous design)** -- Map a single canonical file to host-specific filenames without any content variation. Already proven insufficient. the filename mapping exists via `targets.*.instructions_file`, but the content is identical everywhere. Superseded by the assembly model which adds content variation on top of filename mapping.
 
 ---
 
@@ -429,7 +429,7 @@ Dev mode uses a symmetric pair of operations that mirror the install/uninstall l
 1. Validate the directory contains a valid `manifest.json`
 2. Prompt for required config values (same as install)
 3. Generate `.claude-plugin/plugin.json` inside the source directory (from manifest metadata)
-4. Create symlink: `~/.ccpkg/plugins/{name}` → source directory
+4. Create symlink: `~/.ccpkg/plugins/{name}` -> source directory
 5. Add `{name}@ccpkg` to `enabledPlugins` in `settings.json`
 6. Render MCP/LSP templates with config substitution
 7. Write lockfile entry with `"source": "link:/absolute/path"`, `"linked": true`, and `"generated_plugin_json": true` (if plugin.json was created by ccpkg, not pre-existing)
