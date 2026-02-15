@@ -849,6 +849,68 @@ For quick one-off testing without any persistent side effects, developers can us
 
 ---
 
+## Host Integration
+
+ccpkg integrates with Claude Code's plugin system to provide namespaced installation and component discovery. Rather than placing files directly in user-level directories (where namespacing is unavailable), ccpkg installs packages as Claude Code plugins and leverages the host's existing plugin runtime for component registration, namespace isolation, and lazy loading.
+
+### Bootstrap
+
+On first use, ccpkg registers itself as a plugin marketplace by adding an entry to the host's `settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "ccpkg": {
+      "source": {
+        "source": "directory",
+        "path": "~/.ccpkg/plugins"
+      }
+    }
+  }
+}
+```
+
+The `directory` source type tells Claude Code to discover plugins by scanning `~/.ccpkg/plugins/`. Each subdirectory containing a `.claude-plugin/plugin.json` is treated as a plugin.
+
+### Plugin Registration
+
+During installation, ccpkg performs two host-facing registration steps:
+
+1. **Generate `.claude-plugin/plugin.json`.** The installer creates this file inside the package's install directory, mapping manifest fields to plugin manifest fields (`name`, `version`, `description`, `author`). This file is what the host uses to identify and load the plugin.
+
+2. **Add to `enabledPlugins`.** The installer adds `{name}@ccpkg: true` to the `enabledPlugins` object in `settings.json`. This ensures the host recognizes the plugin as enabled.
+
+These two steps — a plugin.json file in the discovery directory and an enabledPlugins entry — are the complete integration surface. No other host APIs or internal files need to be modified.
+
+### Namespacing
+
+Namespacing is provided automatically by the host's plugin system. ccpkg does not implement its own namespacing mechanism.
+
+- The ccpkg manifest `name` field maps to the `.claude-plugin/plugin.json` `name` field, which becomes the namespace prefix.
+- All components within the plugin are namespaced as `{package-name}:{component-name}`.
+- Component names within the namespace are derived from directory names (for skills and agents) or file names (for commands).
+- No file editing or frontmatter rewriting is required — the host applies the namespace prefix automatically based on the plugin.json `name`.
+
+For example, a package named `api-testing` containing a skill directory `skills/run-suite/` exposes the skill as `/api-testing:run-suite`.
+
+> **Note:** User-level skills (`~/.claude/skills/`) and user-level commands (`~/.claude/commands/`) cannot be namespaced — subdirectories are flattened by the host. This is why ccpkg installs packages as plugins rather than placing files in user-level directories.
+
+### Scope and Settings
+
+ccpkg supports multiple installation scopes, each mapping to a different host settings location:
+
+| Scope | Settings Location | Plugin Directory | Behavior |
+|---|---|---|---|
+| **User** | `~/.claude/settings.json` | `~/.ccpkg/plugins/` | Available in all sessions |
+| **Project** | `{project}/.claude/settings.json` | `{project}/.ccpkg/plugins/` | Available in project sessions; settings committed to git |
+| **Managed** | Enterprise/org managed settings | N/A | Read-only; admins can allowlist ccpkg via `strictKnownMarketplaces` |
+
+Project-scoped settings are committed to version control. When a team member opens a project with ccpkg plugins declared in `.claude/settings.json`, the host prompts them to install the referenced plugins.
+
+Settings precedence follows the host's resolution order: **Managed > Local > Project > User**. A managed setting always wins; a project setting overrides user-level for the duration of that project session.
+
+---
+
 ## Lockfile Format
 
 The lockfile records the state of all installed packages at a given scope. It enables deterministic environment reproduction and team sharing.
