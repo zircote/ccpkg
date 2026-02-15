@@ -56,6 +56,8 @@ The following principles guide the design of the ccpkg format. Implementors SHOU
 
 6. **No install-time code execution.** Packages MUST NOT execute arbitrary code during installation. There are no postinstall scripts, no build steps, and no setup hooks. The installation process is purely declarative: extract, configure, register.
 
+7. **MCP server deduplication.** When multiple packages declare MCP servers with the same identity (key name and origin), the installer SHOULD deduplicate them. The highest version wins by default. Users MUST be able to override deduplication per-server or globally.
+
 8. **No inter-package dependencies.** Inter-package dependencies are explicitly out of scope for this specification version. Each package MUST be self-contained and MUST NOT declare dependencies on other ccpkg packages. If a skill requires an MCP server, both MUST be packaged together in a single `.ccpkg` archive.
 
 ---
