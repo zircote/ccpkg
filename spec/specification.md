@@ -538,6 +538,40 @@ The hooks file is a JSON object where each key is an event type and the value is
 
 Hosts MAY define additional event types. Hooks for unrecognized event types MUST be silently ignored.
 
+#### Canonical Event Vocabulary
+
+The event types listed above use Claude Code's naming convention. To enable portable hook definitions that work across multiple hosts, ccpkg defines a canonical (tool-neutral) event vocabulary. Package authors MAY use canonical event names in their `hooks.json` files; the installer translates them to the active host's conventions at install time using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+
+**Canonical event names and host mappings:**
+
+| Canonical Event | Claude Code | Gemini CLI | OpenCode | Codex CLI | Copilot | Description |
+|---|---|---|---|---|---|---|
+| `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
+| `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
+| `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
+| `session-end` | `SessionEnd` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
+| `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
+| `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
+| `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
+| `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
+
+A `—` in the table means the host has no equivalent event. The canonical vocabulary covers the portable subset of events that exist on 3+ hosts. Hosts define many additional events beyond this vocabulary.
+
+**Host-specific events NOT in canonical vocabulary** (these remain host-specific and are not mapped):
+
+- **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
+- **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
+- **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
+- **Codex CLI**: (no additional events beyond the two listed)
+- **Copilot**: (no additional events beyond the six listed)
+
+**Usage rules:**
+
+- Package authors MAY use either canonical names or host-specific names in `hooks.json`.
+- When canonical names are used, the installer MUST translate them to the active host's convention using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+- When host-specific names are used directly, they work only on that host and are silently ignored by others (existing behavior).
+- Hosts MAY define additional event types beyond this vocabulary; the canonical vocabulary covers the portable subset.
+
 **Hook Definition:**
 
 | Field | Required | Type | Description |
@@ -564,6 +598,27 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
   ]
 }
 ```
+
+**Example hooks.json using canonical event names:**
+
+```json
+{
+  "post-tool-use": [
+    {
+      "matcher": "Bash",
+      "command": "scripts/lint-output.sh",
+      "timeout": 5000
+    }
+  ],
+  "session-start": [
+    {
+      "command": "scripts/check-env.sh"
+    }
+  ]
+}
+```
+
+This example uses canonical event names. The installer translates these to the active host's conventions at install time. See [Targets Object](#targets-object) for the `hook_events` mapping.
 
 ### MCP Servers
 
