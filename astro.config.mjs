@@ -53,6 +53,10 @@ export default defineConfig({
                 },
                 { label: "Lockfile", slug: "specification/lockfile" },
                 { label: "Lazy Loading", slug: "specification/lazy-loading" },
+                {
+                  label: "Remote Components",
+                  slug: "specification/remote-components",
+                },
                 { label: "Registry", slug: "specification/registry" },
               ],
             },
