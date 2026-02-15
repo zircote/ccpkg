@@ -1343,6 +1343,23 @@ The `shared_mcp_servers` top-level field tracks MCP servers that are declared by
 
 ---
 
+## Archive Cache
+
+Installers MUST maintain a local cache of installed `.ccpkg` archives to support MCP server reassignment on uninstall (see [Uninstall](#uninstall)).
+
+### Location
+
+| Scope | Cache Path |
+|---|---|
+| User | `~/.ccpkg/cache/archives/{name}-{version}.ccpkg` |
+| Project | `{project-root}/.ccpkg/cache/archives/{name}-{version}.ccpkg` |
+
+### Retention
+
+- Archives for packages referenced by any `declared_by` list in `shared_mcp_servers` MUST be retained.
+- Archives for packages not referenced by any `declared_by` list MAY be evicted.
+- Installers MAY provide a cache cleanup command to reclaim disk space.
+
 ---
 
 ## Remote Component References

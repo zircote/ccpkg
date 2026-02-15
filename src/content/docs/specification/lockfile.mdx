@@ -87,3 +87,20 @@ The `shared_mcp_servers` top-level field tracks MCP servers that are declared by
 - **Project lockfiles** (`{project-root}/.claude/ccpkg-lock.json`) SHOULD be committed to version control. This allows team members to reproduce the same package environment.
 - **User lockfiles** (`~/.claude/ccpkg-lock.json`) are personal and SHOULD NOT be shared.
 - An installer MAY provide a `ccpkg restore` command that reads the lockfile and installs all listed packages at their recorded versions.
+
+## Archive Cache
+
+Installers MUST maintain a local cache of installed `.ccpkg` archives to support MCP server reassignment on uninstall (see [Install Lifecycle](/specification/install-lifecycle/)).
+
+### Location
+
+| Scope | Cache Path |
+|---|---|
+| User | `~/.ccpkg/cache/archives/{name}-{version}.ccpkg` |
+| Project | `{project-root}/.ccpkg/cache/archives/{name}-{version}.ccpkg` |
+
+### Retention
+
+- Archives for packages referenced by any `declared_by` list in `shared_mcp_servers` MUST be retained.
+- Archives for packages not referenced by any `declared_by` list MAY be evicted.
+- Installers MAY provide a cache cleanup command to reclaim disk space.
