@@ -226,6 +226,44 @@ The `components` object declares which component types are included in the archi
 | `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
 | `instructions` | `string` | Path to the canonical `INSTRUCTIONS.md` file within the archive. |
 
+Each component field that accepts an array (`skills`, `agents`, `commands`) supports two declaration forms:
+
+1. **Simple form** (string): A path to the component. The component is available on all hosts.
+2. **Structured form** (object): An object with `path` and optional metadata fields. Use this to scope components to specific hosts.
+
+**Structured form fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `path` | REQUIRED | `string` | Path to the component (same as the simple form string value) |
+| `hosts` | OPTIONAL | `string[]` | List of host identifiers on which this component should be installed. If omitted, the component is installed on all hosts. |
+
+**Example with per-component host scoping:**
+
+```json
+{
+  "components": {
+    "skills": [
+      "skills/universal-skill",
+      {
+        "path": "skills/claude-specific-skill",
+        "hosts": ["claude"]
+      }
+    ],
+    "hooks": "hooks/hooks.json",
+    "agents": [
+      "agents/universal-agent",
+      {
+        "path": "agents/copilot-agent",
+        "hosts": ["copilot"]
+      }
+    ]
+  }
+}
+```
+
+When an installer encounters a component scoped to hosts that do not include the active host, it MUST skip that component silently. The installer MUST NOT treat this as an error.
+
 ### Config Object
 
 The `config` object defines configuration slots that users populate at install time. Each key is a configuration variable name; the value is a config slot definition.
