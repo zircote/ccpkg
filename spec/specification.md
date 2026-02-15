@@ -1196,6 +1196,60 @@ At session start, the host scans the `~/.ccpkg/plugins/` directory (registered v
 
 ---
 
+## Remote Component References
+
+Components declared in a manifest MAY reference remote sources instead of local archive paths. This enables lightweight distribution of individual components without requiring a full `.ccpkg` archive.
+
+### Remote Component Declaration
+
+A component path that begins with `https://` is a remote reference. The installer MUST fetch the component from the URL and cache it locally before registration.
+
+In the structured component form (see [Components Object](#components-object)), a remote component uses the `url` field instead of `path`:
+
+```json
+{
+  "components": {
+    "skills": [
+      "skills/local-skill",
+      {
+        "url": "https://example.com/skills/remote-skill/SKILL.md",
+        "checksum": "sha256:a1b2c3d4...",
+        "cache_ttl": 86400
+      }
+    ]
+  }
+}
+```
+
+### Remote Component Fields
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `url` | REQUIRED | `string` | HTTPS URL to the component file or directory |
+| `checksum` | REQUIRED | `string` | SHA-256 checksum of the remote content. Format: `sha256:<hex>` |
+| `cache_ttl` | OPTIONAL | `number` | Cache duration in seconds. Default: 86400 (24 hours). `0` means always fetch. |
+| `hosts` | OPTIONAL | `string[]` | Host scoping (same semantics as local components) |
+
+### Security Requirements
+
+- Remote component URLs MUST use HTTPS.
+- The `checksum` field is REQUIRED for all remote references. Installers MUST verify the checksum after fetching and MUST reject content that does not match.
+- Authors who publish remote skills at mutable URLs MUST update the checksum in their manifest when the remote content changes.
+
+### Caching
+
+Installers MUST cache fetched remote components locally. When the cache is valid (within `cache_ttl`), the installer MUST use the cached copy without network access. When the cache is expired, the installer SHOULD attempt to refresh and MUST fall back to the cached copy if the network is unavailable.
+
+### Lockfile Integration
+
+Remote components are recorded in the lockfile with their resolved URL, checksum, and fetch timestamp. See [Lockfile Format](#lockfile-format) for the `remote_sources` field.
+
+### Direct URL Installation
+
+A conforming installer MAY support installing a single component directly from a URL without a manifest. This is a convenience shortcut for single-component distribution. The behavior and syntax of direct URL installation is an implementation concern and is not specified here.
+
+---
+
 ## Registry Protocol
 
 Registries are OPTIONAL. They provide package discovery, search, and version resolution. No central authority is required; users MAY configure multiple registries, and registries are additive.
