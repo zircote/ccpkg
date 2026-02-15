@@ -362,6 +362,20 @@ The ccpkg format targets multiple AI coding assistant hosts, but each host has f
 
 ---
 
+### 15. Instructions Assembly — Base + Per-Host Overlays
+
+**Decision**: The `components.instructions` field supports both a simple string form (single file) and a structured form declaring a base file with optional per-host overlay files. Overlays declare their assembly position (`append`, `prepend`, or `insert` at a named marker) via YAML frontmatter. The installer assembles the final instructions output per host at install time.
+
+**Rationale**: The original "one file, copy everywhere" model is too rigid for real-world packages. Package authors need shared context that applies to all hosts (project conventions, error handling patterns, tool usage guidelines) combined with host-specific tuning (e.g., "use Claude Code's subagent spawning" or "enable Copilot agent mode"). Rather than maintaining entirely separate instruction files per host (which defeats the shared-base purpose), the assembly model lets authors write common content once and layer host-specific additions. Three positioning strategies cover real needs: append for additive content, prepend for prerequisite notices, and marker-based insertion for content that belongs mid-document. Overlay frontmatter keeps the positioning declaration co-located with the content it governs.
+
+**Alternatives considered**:
+
+1. **Separate instruction files per host** -- Each host gets its own complete file (`claude-instructions.md`, `copilot-instructions.md`). Simple to implement but leads to content duplication. When shared content changes, authors must update N files. Rejected because it undermines the DRY principle and scales poorly with host count.
+2. **Template language with conditionals** -- Use a templating syntax (e.g., Handlebars, Jinja) with `{{#if host == "claude"}}` blocks. Powerful but introduces a template engine dependency, makes the raw files hard to read, and is overkill for what is typically "shared base + small per-host additions." Rejected for complexity.
+3. **mappings.json only (previous design)** -- Map a single canonical file to host-specific filenames without any content variation. Already proven insufficient — the filename mapping exists via `targets.*.instructions_file`, but the content is identical everywhere. Superseded by the assembly model which adds content variation on top of filename mapping.
+
+---
+
 ## Relationship to Existing Specifications
 
 ccpkg does not replace existing standards. It composes them.

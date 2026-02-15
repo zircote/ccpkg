@@ -159,8 +159,11 @@ example-plugin-1.2.0.ccpkg (ZIP)
 ├── lsp/
 │   └── .lsp.json                   # LSP server config template
 ├── instructions/
-│   ├── INSTRUCTIONS.md             # Canonical instruction file
-│   └── mappings.json               # Tool-specific filename mappings
+│   ├── base.md                     # Base instructions (shared across all hosts)
+│   └── hosts/                      # Per-host overlay files
+│       ├── claude.md               # Claude-specific overlay
+│       ├── copilot.md              # Copilot-specific overlay
+│       └── gemini.md               # Gemini-specific overlay
 ├── config.schema.json              # OPTIONAL — JSON Schema for config
 ├── icon.png                        # OPTIONAL — package icon (PNG, max 512x512)
 └── LICENSE                         # OPTIONAL — license file
@@ -224,7 +227,7 @@ The `components` object declares which component types are included in the archi
 | `hooks` | `string` | Path to a `hooks.json` file within the archive. |
 | `mcp` | `string` | Path to an `.mcp.json` template file within the archive. |
 | `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
-| `instructions` | `string` | Path to the canonical `INSTRUCTIONS.md` file within the archive. |
+| `instructions` | `string` or `object` | Instructions declaration. A string is a path to a single instructions file. An object declares a base file and optional per-host overlays for assembly. See [Instructions](#instructions). |
 
 Each component field that accepts an array (`skills`, `agents`, `commands`) supports two declaration forms:
 
@@ -318,7 +321,7 @@ The `targets` object supports the following standard fields. Tool-specific adapt
 | `hook_events` | `object` | Map of canonical event names to host-native event names |
 | `mcp_env_prefix` | `string` | Environment variable prefix for MCP server credential injection |
 
-`instructions_file` — An OPTIONAL string specifying the filename to which the canonical `INSTRUCTIONS.md` is copied for that tool.
+`instructions_file` — An OPTIONAL string specifying the filename to which the assembled instructions content is written for that tool.
 
 `hook_events` — An OPTIONAL object that maps canonical event names to the host's native event type names. Keys are canonical event names (lowercase-hyphenated); values are the host's native event type strings.
 
@@ -408,7 +411,13 @@ Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode 
     ],
     "hooks": "hooks/hooks.json",
     "mcp": "mcp/.mcp.json",
-    "instructions": "instructions/INSTRUCTIONS.md"
+    "instructions": {
+      "base": "instructions/base.md",
+      "hosts": {
+        "claude": "instructions/hosts/claude.md",
+        "copilot": "instructions/hosts/copilot.md"
+      }
+    }
   },
   "config": {
     "API_BASE_URL": {
@@ -818,30 +827,109 @@ LSP (Language Server Protocol) server configurations enable packages to provide 
 
 ### Instructions
 
-Instructions are canonical documentation files that provide guidance to the AI coding assistant. The `instructions/INSTRUCTIONS.md` file contains the universal instruction content. The `instructions/mappings.json` file maps this content to tool-specific filenames.
+Instructions are documentation files that provide guidance to the AI coding assistant. The `components.instructions` field declares the instruction content to be assembled and installed.
 
-**Requirements:**
+#### Simple Form
 
-- If `components.instructions` is declared, the referenced file MUST exist in the archive.
-- A `mappings.json` file SHOULD be present alongside the instructions file.
-- Installers MUST copy the canonical instructions file to the appropriate tool-specific filename during installation.
-
-**mappings.json Format:**
+When `components.instructions` is a string, it is a path to a single instructions file. The installer copies this file to the host-specific filename defined in `targets.*.instructions_file`. This is equivalent to the base-only assembly model with no per-host overlays.
 
 ```json
-{
-  "claude": "CLAUDE.md",
-  "codex": "AGENTS.md",
-  "copilot": ".github/copilot-instructions.md",
-  "gemini": "GEMINI.md"
+"instructions": "instructions/base.md"
+```
+
+#### Structured Form (Base + Overlay Assembly)
+
+When `components.instructions` is an object, it declares a base file and optional per-host overlay files. The installer assembles the final output by combining the base content with the overlay for the active host.
+
+```json
+"instructions": {
+  "base": "instructions/base.md",
+  "hosts": {
+    "claude": "instructions/hosts/claude.md",
+    "copilot": "instructions/hosts/copilot.md",
+    "gemini": "instructions/hosts/gemini.md"
+  }
 }
 ```
 
-The keys are tool identifiers matching those used in the `targets` manifest field. The values are relative file paths (from the project or user config root) where the instructions should be written.
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `base` | REQUIRED | `string` | Path to the base instructions file within the archive. |
+| `hosts` | OPTIONAL | `object` | Map of host identifiers to overlay file paths within the archive. Keys match identifiers used in the `targets` manifest field. |
 
-If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`. Authors SHOULD use `targets.*.instructions_file` for simple cases. Use `mappings.json` when the package needs to support hosts not listed in targets.
+#### Overlay Files
 
-If the active host tool is not present in either `targets` or `mappings.json`, the installer SHOULD copy the file as `INSTRUCTIONS.md` and emit a warning.
+Overlay files are Markdown files with YAML frontmatter that declares how the overlay content is positioned relative to the base content.
+
+**Frontmatter fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `position` | OPTIONAL | `string` | One of `append`, `prepend`, or `insert`. Default: `append`. |
+| `marker` | Conditional | `string` | Name of the insertion marker in the base file. REQUIRED when `position` is `insert`. |
+
+**Example overlay — append (default):**
+
+```markdown
+---
+position: append
+---
+## Claude-Specific Guidelines
+
+Use Claude Code's native subagent spawning for parallel research tasks.
+```
+
+**Example overlay — prepend:**
+
+```markdown
+---
+position: prepend
+---
+> This package requires Copilot agent mode. Enable it in VS Code settings.
+```
+
+**Example overlay — insert at marker:**
+
+```markdown
+---
+position: insert
+marker: host-tools
+---
+When using Gemini CLI, prefer the built-in extension system for tool management.
+```
+
+Where the base file contains a named marker at the desired insertion point:
+
+```markdown
+## Tool Usage
+
+General tool guidelines here...
+
+<!-- ccpkg:host-tools -->
+
+## Error Handling
+...
+```
+
+#### Assembly Rules
+
+| `position` | `marker` | Behavior |
+|---|---|---|
+| `append` | ignored | Overlay content appended after base content |
+| `prepend` | ignored | Overlay content prepended before base content |
+| `insert` | REQUIRED | Replaces `<!-- ccpkg:{marker} -->` in base with overlay content |
+
+- If no overlay exists for the active host, the base content is used as-is.
+- If `position` is `insert` but the marker `<!-- ccpkg:{marker} -->` is not found in the base file, the installer MUST report an error.
+- The overlay's YAML frontmatter MUST be stripped before assembly — only the Markdown body is included in the output.
+- The assembled output is written to the host-specific filename defined in `targets.*.instructions_file`.
+- If the active host is not present in either `hosts` or `targets`, the installer SHOULD write the base content as `INSTRUCTIONS.md` and emit a warning.
+
+#### Requirements
+
+- If `components.instructions` is declared (in either form), the referenced base file MUST exist in the archive.
+- All overlay files declared in `hosts` MUST exist in the archive.
+- Marker names MUST match the pattern `[a-z0-9]+(-[a-z0-9]+)*` (lowercase alphanumeric with hyphens).
 
 ---
 
@@ -1523,7 +1611,7 @@ Package authors SHOULD use per-component host scoping (see [Components Object](#
 
 The following mechanisms handle tool-specific differences:
 
-1. **Instruction file mapping.** The `instructions/mappings.json` file and `targets.*.instructions_file` manifest field map canonical `INSTRUCTIONS.md` content to tool-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
+1. **Instruction file assembly.** The `components.instructions` field supports base + per-host overlay assembly. Overlays declare positioning (`append`, `prepend`, `insert` at marker) via YAML frontmatter. The `targets.*.instructions_file` field maps assembled output to host-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
 
 2. **Targets object.** The `targets` field in `manifest.json` allows authors to declare tool-specific overrides. Each tool adapter defines its own schema for the target value object.
 
@@ -1533,7 +1621,7 @@ The following mechanisms handle tool-specific differences:
 
 ### Portability Guidelines for Authors
 
-- Use `INSTRUCTIONS.md` and `mappings.json` for instructions. Do not hardcode tool-specific filenames.
+- Use `instructions.base` with per-host overlays for instructions. Do not hardcode tool-specific filenames.
 - Prefer MCP for tool integration over host-specific mechanisms.
 - Use the `compatibility` field to declare minimum host versions rather than excluding hosts.
 - Test packages across multiple hosts when possible.
