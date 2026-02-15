@@ -168,6 +168,17 @@ example-plugin-1.2.0.ccpkg (ZIP)
 
 Only `manifest.json` is REQUIRED. All other files and directories are OPTIONAL and declared via the `components` field in the manifest.
 
+> **Note:** At install time, the installer generates a `.claude-plugin/plugin.json` file inside the extracted package directory. This generated file is **not** part of the archive — it is a host-specific artifact created during installation. The installer maps manifest fields to plugin.json fields as follows:
+>
+> | Manifest Field | plugin.json Field |
+> |---|---|
+> | `name` | `name` |
+> | `version` | `version` |
+> | `description` | `description` |
+> | `author` | `author` |
+>
+> Package authors SHOULD NOT include `.claude-plugin/` in their archives. If a `.claude-plugin/plugin.json` is present in the archive, the installer MUST use the generated version (from manifest metadata) and MAY warn the author.
+
 ---
 
 ## Manifest Schema
