@@ -87,21 +87,120 @@
         "skills": {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["path"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the skill directory."
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
+                  },
+                  "cache_ttl": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Cache duration in seconds for remote content. Default: 86400."
+                  }
+                }
+              }
+            ]
           },
           "description": "Paths to skill directories relative to the package root. Each directory MUST contain a SKILL.md file."
         },
         "agents": {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["path"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the agent directory."
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
+                  },
+                  "cache_ttl": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Cache duration in seconds for remote content. Default: 86400."
+                  }
+                }
+              }
+            ]
           },
           "description": "Paths to agent directories relative to the package root. Each directory MUST contain an AGENT.md file."
         },
         "commands": {
           "type": "array",
           "items": {
-            "type": "string"
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["path"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the command file."
+                  },
+                  "hosts": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
+                  },
+                  "checksum": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$",
+                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
+                  },
+                  "cache_ttl": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Cache duration in seconds for remote content. Default: 86400."
+                  }
+                }
+              }
+            ]
           },
           "description": "Paths to command files relative to the package root."
         },
@@ -118,8 +217,31 @@
           "description": "Path to a .lsp.json template file relative to the package root."
         },
         "instructions": {
-          "type": "string",
-          "description": "Path to a canonical instructions file relative to the package root."
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Path to a single instructions file relative to the package root."
+            },
+            {
+              "type": "object",
+              "required": ["base"],
+              "additionalProperties": false,
+              "description": "Structured instructions declaration with base file and optional per-host overlays.",
+              "properties": {
+                "base": {
+                  "type": "string",
+                  "description": "Path to the base instructions file within the archive."
+                },
+                "hosts": {
+                  "type": "object",
+                  "description": "Map of host identifiers to overlay file paths within the archive.",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -188,14 +310,22 @@
     },
     "targets": {
       "type": "object",
-      "description": "Per-target overrides for component paths. Keys are target identifiers (e.g. tool names or platforms).",
+      "description": "Per-target overrides. Keys are host identifiers.",
       "additionalProperties": {
         "type": "object",
-        "description": "Target-specific path overrides.",
         "properties": {
           "instructions_file": {
             "type": "string",
-            "description": "Override path to the instructions file for this target."
+            "description": "Override path for the instructions file on this host."
+          },
+          "hook_events": {
+            "type": "object",
+            "description": "Map of canonical event names to host-native event names.",
+            "additionalProperties": { "type": "string" }
+          },
+          "mcp_env_prefix": {
+            "type": "string",
+            "description": "Environment variable prefix for MCP server credential injection."
           }
         },
         "additionalProperties": true

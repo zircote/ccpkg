@@ -159,8 +159,11 @@ example-plugin-1.2.0.ccpkg (ZIP)
 ├── lsp/
 │   └── .lsp.json                   # LSP server config template
 ├── instructions/
-│   ├── INSTRUCTIONS.md             # Canonical instruction file
-│   └── mappings.json               # Tool-specific filename mappings
+│   ├── base.md                     # Base instructions (shared across all hosts)
+│   └── hosts/                      # Per-host overlay files
+│       ├── claude.md               # Claude-specific overlay
+│       ├── copilot.md              # Copilot-specific overlay
+│       └── gemini.md               # Gemini-specific overlay
 ├── config.schema.json              # OPTIONAL — JSON Schema for config
 ├── icon.png                        # OPTIONAL — package icon (PNG, max 512x512)
 └── LICENSE                         # OPTIONAL — license file
@@ -224,7 +227,45 @@ The `components` object declares which component types are included in the archi
 | `hooks` | `string` | Path to a `hooks.json` file within the archive. |
 | `mcp` | `string` | Path to an `.mcp.json` template file within the archive. |
 | `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
-| `instructions` | `string` | Path to the canonical `INSTRUCTIONS.md` file within the archive. |
+| `instructions` | `string` or `object` | Instructions declaration. A string is a path to a single instructions file. An object declares a base file and optional per-host overlays for assembly. See [Instructions](#instructions). |
+
+Each component field that accepts an array (`skills`, `agents`, `commands`) supports two declaration forms:
+
+1. **Simple form** (string): A path to the component. The component is available on all hosts.
+2. **Structured form** (object): An object with `path` and optional metadata fields. Use this to scope components to specific hosts.
+
+**Structured form fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `path` | REQUIRED | `string` | Path to the component (same as the simple form string value) |
+| `hosts` | OPTIONAL | `string[]` | List of host identifiers on which this component should be installed. If omitted, the component is installed on all hosts. |
+
+**Example with per-component host scoping:**
+
+```json
+{
+  "components": {
+    "skills": [
+      "skills/universal-skill",
+      {
+        "path": "skills/claude-specific-skill",
+        "hosts": ["claude"]
+      }
+    ],
+    "hooks": "hooks/hooks.json",
+    "agents": [
+      "agents/universal-agent",
+      {
+        "path": "agents/copilot-agent",
+        "hosts": ["copilot"]
+      }
+    ]
+  }
+}
+```
+
+When an installer encounters a component scoped to hosts that do not include the active host, it MUST skip that component silently. The installer MUST NOT treat this as an error.
 
 ### Config Object
 
@@ -272,26 +313,78 @@ Installers SHOULD warn the user if the host does not satisfy the declared compat
 
 The `targets` object provides tool-specific overrides and adapter mappings. Each key is a tool identifier. The value is an object with tool-specific configuration.
 
+The `targets` object supports the following standard fields. Tool-specific adapters MAY define additional fields beyond these.
+
+| Field | Type | Description |
+|---|---|---|
+| `instructions_file` | `string` | Override path for the instructions file on this host |
+| `hook_events` | `object` | Map of canonical event names to host-native event names |
+| `mcp_env_prefix` | `string` | Environment variable prefix for MCP server credential injection |
+
+`instructions_file` — An OPTIONAL string specifying the filename to which the assembled instructions content is written for that tool.
+
+`hook_events` — An OPTIONAL object that maps canonical event names to the host's native event type names. Keys are canonical event names (lowercase-hyphenated); values are the host's native event type strings.
+
+`mcp_env_prefix` — An OPTIONAL string specifying the environment variable prefix the host uses to inject MCP server credentials. For example, Copilot uses `COPILOT_MCP_` while Claude Code uses direct config injection.
+
 ```json
 {
   "targets": {
     "claude": {
-      "instructions_file": "CLAUDE.md"
+      "instructions_file": "CLAUDE.md",
+      "hook_events": {
+        "pre-tool-use": "PreToolUse",
+        "post-tool-use": "PostToolUse",
+        "session-start": "SessionStart",
+        "session-end": "SessionEnd",
+        "notification": "Notification",
+        "pre-compact": "PreCompact",
+        "user-prompt-submit": "UserPromptSubmit"
+      }
     },
     "codex": {
-      "instructions_file": "AGENTS.md"
+      "instructions_file": "AGENTS.md",
+      "hook_events": {
+        "post-tool-use": "AfterToolUse",
+        "notification": "notify"
+      }
     },
     "copilot": {
-      "instructions_file": ".github/copilot-instructions.md"
+      "instructions_file": ".github/copilot-instructions.md",
+      "mcp_env_prefix": "COPILOT_MCP_",
+      "hook_events": {
+        "pre-tool-use": "preToolUse",
+        "post-tool-use": "postToolUse",
+        "session-start": "sessionStart",
+        "session-end": "sessionEnd",
+        "user-prompt-submit": "userPromptSubmitted",
+        "error": "errorOccurred"
+      }
     },
     "gemini": {
-      "instructions_file": "GEMINI.md"
+      "instructions_file": "GEMINI.md",
+      "hook_events": {
+        "pre-tool-use": "BeforeTool",
+        "post-tool-use": "AfterTool",
+        "session-start": "SessionStart",
+        "session-end": "SessionEnd",
+        "notification": "Notification",
+        "pre-compact": "PreCompress"
+      }
+    },
+    "opencode": {
+      "instructions_file": "AGENTS.md",
+      "hook_events": {
+        "pre-tool-use": "tool.execute.before",
+        "post-tool-use": "tool.execute.after",
+        "pre-compact": "experimental.session.compacting"
+      }
     }
   }
 }
 ```
 
-The contents of `targets` are not strictly defined by this specification. Tool-specific adapters define their own schemas. The `instructions_file` key is the primary standard adapter field, specifying the filename to which the canonical `INSTRUCTIONS.md` is copied for that tool.
+Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode uses TypeScript plugin hooks rather than shell-based hooks, so only the closest equivalents are mapped. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host.
 
 ### Example Manifest
 
@@ -318,7 +411,13 @@ The contents of `targets` are not strictly defined by this specification. Tool-s
     ],
     "hooks": "hooks/hooks.json",
     "mcp": "mcp/.mcp.json",
-    "instructions": "instructions/INSTRUCTIONS.md"
+    "instructions": {
+      "base": "instructions/base.md",
+      "hosts": {
+        "claude": "instructions/hosts/claude.md",
+        "copilot": "instructions/hosts/copilot.md"
+      }
+    }
   },
   "config": {
     "API_BASE_URL": {
@@ -538,6 +637,40 @@ The hooks file is a JSON object where each key is an event type and the value is
 
 Hosts MAY define additional event types. Hooks for unrecognized event types MUST be silently ignored.
 
+#### Canonical Event Vocabulary
+
+The event types listed above use Claude Code's naming convention. To enable portable hook definitions that work across multiple hosts, ccpkg defines a canonical (tool-neutral) event vocabulary. Package authors MAY use canonical event names in their `hooks.json` files; the installer translates them to the active host's conventions at install time using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+
+**Canonical event names and host mappings:**
+
+| Canonical Event | Claude Code | Gemini CLI | OpenCode | Codex CLI | Copilot | Description |
+|---|---|---|---|---|---|---|
+| `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
+| `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
+| `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
+| `session-end` | `SessionEnd` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
+| `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
+| `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
+| `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
+| `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
+
+A `—` in the table means the host has no equivalent event. The canonical vocabulary covers the portable subset of events that exist on 3+ hosts. Hosts define many additional events beyond this vocabulary.
+
+**Host-specific events NOT in canonical vocabulary** (these remain host-specific and are not mapped):
+
+- **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
+- **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
+- **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
+- **Codex CLI**: (no additional events beyond the two listed)
+- **Copilot**: (no additional events beyond the six listed)
+
+**Usage rules:**
+
+- Package authors MAY use either canonical names or host-specific names in `hooks.json`.
+- When canonical names are used, the installer MUST translate them to the active host's convention using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+- When host-specific names are used directly, they work only on that host and are silently ignored by others (existing behavior).
+- Hosts MAY define additional event types beyond this vocabulary; the canonical vocabulary covers the portable subset.
+
 **Hook Definition:**
 
 | Field | Required | Type | Description |
@@ -564,6 +697,27 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
   ]
 }
 ```
+
+**Example hooks.json using canonical event names:**
+
+```json
+{
+  "post-tool-use": [
+    {
+      "matcher": "Bash",
+      "command": "scripts/lint-output.sh",
+      "timeout": 5000
+    }
+  ],
+  "session-start": [
+    {
+      "command": "scripts/check-env.sh"
+    }
+  ]
+}
+```
+
+This example uses canonical event names. The installer translates these to the active host's conventions at install time. See [Targets Object](#targets-object) for the `hook_events` mapping.
 
 ### MCP Servers
 
@@ -673,30 +827,109 @@ LSP (Language Server Protocol) server configurations enable packages to provide 
 
 ### Instructions
 
-Instructions are canonical documentation files that provide guidance to the AI coding assistant. The `instructions/INSTRUCTIONS.md` file contains the universal instruction content. The `instructions/mappings.json` file maps this content to tool-specific filenames.
+Instructions are documentation files that provide guidance to the AI coding assistant. The `components.instructions` field declares the instruction content to be assembled and installed.
 
-**Requirements:**
+#### Simple Form
 
-- If `components.instructions` is declared, the referenced file MUST exist in the archive.
-- A `mappings.json` file SHOULD be present alongside the instructions file.
-- Installers MUST copy the canonical instructions file to the appropriate tool-specific filename during installation.
-
-**mappings.json Format:**
+When `components.instructions` is a string, it is a path to a single instructions file. The installer copies this file to the host-specific filename defined in `targets.*.instructions_file`. This is equivalent to the base-only assembly model with no per-host overlays.
 
 ```json
-{
-  "claude": "CLAUDE.md",
-  "codex": "AGENTS.md",
-  "copilot": ".github/copilot-instructions.md",
-  "gemini": "GEMINI.md"
+"instructions": "instructions/base.md"
+```
+
+#### Structured Form (Base + Overlay Assembly)
+
+When `components.instructions` is an object, it declares a base file and optional per-host overlay files. The installer assembles the final output by combining the base content with the overlay for the active host.
+
+```json
+"instructions": {
+  "base": "instructions/base.md",
+  "hosts": {
+    "claude": "instructions/hosts/claude.md",
+    "copilot": "instructions/hosts/copilot.md",
+    "gemini": "instructions/hosts/gemini.md"
+  }
 }
 ```
 
-The keys are tool identifiers matching those used in the `targets` manifest field. The values are relative file paths (from the project or user config root) where the instructions should be written.
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `base` | REQUIRED | `string` | Path to the base instructions file within the archive. |
+| `hosts` | OPTIONAL | `object` | Map of host identifiers to overlay file paths within the archive. Keys match identifiers used in the `targets` manifest field. |
 
-If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`. Authors SHOULD use `targets.*.instructions_file` for simple cases. Use `mappings.json` when the package needs to support hosts not listed in targets.
+#### Overlay Files
 
-If the active host tool is not present in either `targets` or `mappings.json`, the installer SHOULD copy the file as `INSTRUCTIONS.md` and emit a warning.
+Overlay files are Markdown files with YAML frontmatter that declares how the overlay content is positioned relative to the base content.
+
+**Frontmatter fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `position` | OPTIONAL | `string` | One of `append`, `prepend`, or `insert`. Default: `append`. |
+| `marker` | Conditional | `string` | Name of the insertion marker in the base file. REQUIRED when `position` is `insert`. |
+
+**Example overlay — append (default):**
+
+```markdown
+---
+position: append
+---
+## Claude-Specific Guidelines
+
+Use Claude Code's native subagent spawning for parallel research tasks.
+```
+
+**Example overlay — prepend:**
+
+```markdown
+---
+position: prepend
+---
+> This package requires Copilot agent mode. Enable it in VS Code settings.
+```
+
+**Example overlay — insert at marker:**
+
+```markdown
+---
+position: insert
+marker: host-tools
+---
+When using Gemini CLI, prefer the built-in extension system for tool management.
+```
+
+Where the base file contains a named marker at the desired insertion point:
+
+```markdown
+## Tool Usage
+
+General tool guidelines here...
+
+<!-- ccpkg:host-tools -->
+
+## Error Handling
+...
+```
+
+#### Assembly Rules
+
+| `position` | `marker` | Behavior |
+|---|---|---|
+| `append` | ignored | Overlay content appended after base content |
+| `prepend` | ignored | Overlay content prepended before base content |
+| `insert` | REQUIRED | Replaces `<!-- ccpkg:{marker} -->` in base with overlay content |
+
+- If no overlay exists for the active host, the base content is used as-is.
+- If `position` is `insert` but the marker `<!-- ccpkg:{marker} -->` is not found in the base file, the installer MUST report an error.
+- The overlay's YAML frontmatter MUST be stripped before assembly — only the Markdown body is included in the output.
+- The assembled output is written to the host-specific filename defined in `targets.*.instructions_file`.
+- If the active host is not present in either `hosts` or `targets`, the installer SHOULD write the base content as `INSTRUCTIONS.md` and emit a warning.
+
+#### Requirements
+
+- If `components.instructions` is declared (in either form), the referenced base file MUST exist in the archive.
+- All overlay files declared in `hosts` MUST exist in the archive.
+- Marker names MUST match the pattern `[a-z0-9]+(-[a-z0-9]+)*` (lowercase alphanumeric with hyphens).
 
 ---
 
@@ -966,6 +1199,14 @@ The lockfile records the state of all installed packages at a given scope. It en
         "commands": ["commands/run-tests.md"],
         "hooks": "hooks/hooks.json",
         "mcp": "mcp/.mcp.json"
+      },
+      "remote_sources": {
+        "skills/cloud-helper": {
+          "url": "https://example.com/skills/cloud-helper/SKILL.md",
+          "checksum": "sha256:b2c3d4e5...",
+          "fetched_at": "2026-02-14T12:00:00Z",
+          "cache_ttl": 86400
+        }
       }
     },
     "my-dev-plugin": {
@@ -1015,6 +1256,16 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `merged_mcp_servers` | `string[]` | MCP server names merged into the host's `.mcp.json` during install. Used for clean removal on uninstall. |
 | `config_keys` | `string[]` | Config variable names stored in the host's settings. Used for clean removal on uninstall. |
 | `components` | `object` | Mirror of the manifest `components` object for quick reference. |
+| `remote_sources` | `object` | Map of component path to remote source metadata. Only present for packages with remote component references. Keys are component identifiers; values are objects with `url`, `checksum`, `fetched_at`, and `cache_ttl`. |
+
+**Remote source entry fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | `string` | The URL from which the component was fetched |
+| `checksum` | `string` | SHA-256 checksum of the fetched content |
+| `fetched_at` | `string` | ISO 8601 timestamp of last successful fetch |
+| `cache_ttl` | `number` | Cache duration in seconds from the manifest declaration |
 
 ### Usage
 
@@ -1048,6 +1299,60 @@ At session start, the host scans the `~/.ccpkg/plugins/` directory (registered v
 | LSP server | First file opened matching the server's language scope | Server process started |
 
 > **Note:** These behaviors are provided by the host application's existing plugin runtime. ccpkg does not implement a custom lazy loading mechanism.
+
+---
+
+## Remote Component References
+
+Components declared in a manifest MAY reference remote sources instead of local archive paths. This enables lightweight distribution of individual components without requiring a full `.ccpkg` archive.
+
+### Remote Component Declaration
+
+A component path that begins with `https://` is a remote reference. The installer MUST fetch the component from the URL and cache it locally before registration.
+
+In the structured component form (see [Components Object](#components-object)), a remote component uses the `url` field instead of `path`:
+
+```json
+{
+  "components": {
+    "skills": [
+      "skills/local-skill",
+      {
+        "url": "https://example.com/skills/remote-skill/SKILL.md",
+        "checksum": "sha256:a1b2c3d4...",
+        "cache_ttl": 86400
+      }
+    ]
+  }
+}
+```
+
+### Remote Component Fields
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `url` | REQUIRED | `string` | HTTPS URL to the component file or directory |
+| `checksum` | REQUIRED | `string` | SHA-256 checksum of the remote content. Format: `sha256:<hex>` |
+| `cache_ttl` | OPTIONAL | `number` | Cache duration in seconds. Default: 86400 (24 hours). `0` means always fetch. |
+| `hosts` | OPTIONAL | `string[]` | Host scoping (same semantics as local components) |
+
+### Security Requirements
+
+- Remote component URLs MUST use HTTPS.
+- The `checksum` field is REQUIRED for all remote references. Installers MUST verify the checksum after fetching and MUST reject content that does not match.
+- Authors who publish remote skills at mutable URLs MUST update the checksum in their manifest when the remote content changes.
+
+### Caching
+
+Installers MUST cache fetched remote components locally. When the cache is valid (within `cache_ttl`), the installer MUST use the cached copy without network access. When the cache is expired, the installer SHOULD attempt to refresh and MUST fall back to the cached copy if the network is unavailable.
+
+### Lockfile Integration
+
+Remote components are recorded in the lockfile with their resolved URL, checksum, and fetch timestamp. See [Lockfile Format](#lockfile-format) for the `remote_sources` field.
+
+### Direct URL Installation
+
+A conforming installer MAY support installing a single component directly from a URL without a manifest. This is a convenience shortcut for single-component distribution. The behavior and syntax of direct URL installation is an implementation concern and is not specified here.
 
 ---
 
@@ -1133,6 +1438,95 @@ When a user installs a package by name (e.g., `ccpkg install api-testing`):
 
 Registry URLs MUST use HTTPS (see [Transport Security](#transport-security)).
 
+### Version Discovery
+
+Registries SHOULD provide a version endpoint that enables efficient update checking without downloading the full index.
+
+**Version endpoint format:**
+
+A registry MAY expose per-package version information at a predictable URL derived from the registry base URL:
+
+```
+{registry-base-url}/packages/{name}/versions.json
+```
+
+**Response schema:**
+
+```json
+{
+  "name": "api-testing",
+  "latest": "2.1.0",
+  "versions": [
+    {
+      "version": "2.1.0",
+      "published_at": "2026-03-01T12:00:00Z",
+      "checksum": "sha256:...",
+      "url": "https://..."
+    },
+    {
+      "version": "2.0.0",
+      "published_at": "2026-02-15T12:00:00Z",
+      "checksum": "sha256:...",
+      "url": "https://..."
+    }
+  ]
+}
+```
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | REQUIRED | `string` | Package name |
+| `latest` | REQUIRED | `string` | Latest stable version (semver) |
+| `versions` | REQUIRED | `array` | All published versions, newest first |
+
+Each version entry uses the same fields as a registry package entry.
+
+Registries SHOULD support `ETag` and `If-None-Match` headers to enable efficient polling. An installer that checks for updates SHOULD cache responses and use conditional requests to minimize bandwidth.
+
+### Security Advisories
+
+Registries MAY publish security advisories for packages. An advisory indicates that one or more versions of a package have a known vulnerability.
+
+**Advisory endpoint format:**
+
+```
+{registry-base-url}/advisories.json
+```
+
+**Response schema:**
+
+```json
+{
+  "advisories": [
+    {
+      "id": "CCPKG-2026-001",
+      "package": "vulnerable-pkg",
+      "affected_versions": "<1.2.3",
+      "severity": "high",
+      "title": "Command injection in hook script",
+      "description": "...",
+      "fixed_in": "1.2.3",
+      "published_at": "2026-03-01T00:00:00Z",
+      "url": "https://..."
+    }
+  ]
+}
+```
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `id` | REQUIRED | `string` | Unique advisory identifier |
+| `package` | REQUIRED | `string` | Affected package name |
+| `affected_versions` | REQUIRED | `string` | Semver range of affected versions |
+| `severity` | REQUIRED | `string` | One of: `critical`, `high`, `medium`, `low` |
+| `title` | REQUIRED | `string` | Short description of the vulnerability |
+| `description` | OPTIONAL | `string` | Detailed description |
+| `fixed_in` | OPTIONAL | `string` | Version that fixes the vulnerability |
+| `published_at` | REQUIRED | `string` | ISO 8601 timestamp |
+| `url` | OPTIONAL | `string` | Link to full advisory details |
+
+Installers that support update discovery SHOULD check the advisory endpoint and SHOULD surface advisories affecting installed packages. The urgency of notification is an implementation concern.
+
 ---
 
 ## Security Considerations
@@ -1191,22 +1585,51 @@ The following components are tool-agnostic and work across any host that support
 | LSP servers (`.lsp.json`) | [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) |
 | Config schema | [JSON Schema](https://json-schema.org/) |
 
+### Component Portability Matrix
+
+The following matrix indicates the portability status of each component type across known hosts. This is informational — hosts not listed here may support any subset of components.
+
+| Component | Claude Code | Copilot | Codex CLI | Gemini CLI | OpenCode |
+|---|---|---|---|---|---|
+| Skills (SKILL.md) | Native | Via instructions | Native | Native | Native |
+| MCP servers | Native | Native (COPILOT_MCP_ prefix) | Native | Native | Native |
+| LSP servers | Native (via plugins) | Not supported | Not supported | Experimental (TS/JS) | Experimental (27+ languages) |
+| Hooks | Native (14 events) | Native (6 events) | Minimal (2 events) | Native (11 events) | Plugin hooks (TypeScript) |
+| Agents (AGENT.md) | Native | Native (.github/agents/) | Not supported | Experimental (sub-agents) | Native (custom agents) |
+| Commands | Native | Not supported | Deprecated (prompts) | Native (TOML files) | Native (Markdown files) |
+| Instructions | CLAUDE.md | .github/copilot-instructions.md | AGENTS.md | GEMINI.md (configurable) | AGENTS.md (fallback: CLAUDE.md) |
+
+**Key:**
+- **Native**: Component type is natively supported by the host
+- **Via [mechanism]**: Component concept maps to a different host mechanism (adapter needed)
+- **Not supported**: Host has no equivalent; component is silently skipped
+- **Partial**: Some features of the component type work; others do not
+
+Package authors SHOULD use per-component host scoping (see [Components Object](#components-object)) to include host-specific variants of components. Authors SHOULD NOT assume all hosts support all component types.
+
 ### Tool-Specific Adapters
 
 The following mechanisms handle tool-specific differences:
 
-1. **Instruction file mapping.** The `instructions/mappings.json` file and `targets.*.instructions_file` manifest field map canonical `INSTRUCTIONS.md` content to tool-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
+1. **Instruction file assembly.** The `components.instructions` field supports base + per-host overlay assembly. Overlays declare positioning (`append`, `prepend`, `insert` at marker) via YAML frontmatter. The `targets.*.instructions_file` field maps assembled output to host-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
 
 2. **Targets object.** The `targets` field in `manifest.json` allows authors to declare tool-specific overrides. Each tool adapter defines its own schema for the target value object.
 
 3. **Hooks.** Hook event types and execution semantics are host-specific. Hosts MUST silently ignore unrecognized event types, enabling packages to include hooks for multiple hosts without conflict.
 
+4. **Per-component host scoping.** The `hosts` field in structured component declarations limits a component to specific hosts. Installers silently skip components not targeted at the active host.
+
 ### Portability Guidelines for Authors
 
-- Use `INSTRUCTIONS.md` and `mappings.json` for instructions. Do not hardcode tool-specific filenames.
+- Use `instructions.base` with per-host overlays for instructions. Do not hardcode tool-specific filenames.
 - Prefer MCP for tool integration over host-specific mechanisms.
 - Use the `compatibility` field to declare minimum host versions rather than excluding hosts.
 - Test packages across multiple hosts when possible.
+- Use per-component `hosts` scoping to include host-specific hooks or agents alongside universal skills.
+- When targeting Copilot, note that MCP server credentials are injected via `COPILOT_MCP_` environment variables. Use `targets.copilot.mcp_env_prefix` to declare this.
+- Hooks are the most portable after Skills and MCP — four of five hosts (Claude Code, Copilot, Gemini CLI, OpenCode) have native hook systems. Codex CLI has minimal support (two events only). Use canonical event names for maximum portability.
+- Agents are not yet portable across hosts. Each host uses a different agent definition format and execution model. Scope agents to specific hosts via the `hosts` field.
+- LSP servers are only natively supported by Claude Code. Gemini CLI and OpenCode have experimental support. Scope LSP components to supported hosts.
 
 ---
 

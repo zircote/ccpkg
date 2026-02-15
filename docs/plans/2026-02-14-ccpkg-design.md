@@ -304,6 +304,76 @@ Namespacing is handled entirely by the host's plugin system. ccpkg does not edit
 - **Colon-prefixed directory names**: Filesystem-unfriendly. Colons are illegal in Windows paths and awkward in shell commands. The plugin system handles the colon-separated namespace presentation without requiring it in the filesystem.
 - **Namespace mapping file**: Unnecessary indirection. The host plugin system already provides this mapping. Adding a ccpkg-specific mapping would create a second source of truth.
 
+### 11. Canonical hook event vocabulary
+
+Each host names the same lifecycle events differently. Claude Code uses `PreToolUse`, Gemini CLI uses `BeforeTool`, Copilot uses `preToolUse`, OpenCode uses `tool.execute.before`, and Codex CLI uses `AfterToolUse` (for post-tool only). Without a shared vocabulary, package authors must either pick one host's naming convention or duplicate hook definitions for every target.
+
+**Decision**: Define a canonical (tool-neutral) hook event vocabulary that maps to host-specific event names via the `targets.*.hook_events` manifest field. The canonical vocabulary covers eight events that exist on three or more hosts: `pre-tool-use`, `post-tool-use`, `session-start`, `session-end`, `notification`, `error`, `pre-compact`, and `user-prompt-submit`.
+
+**How it works**: Package authors write hooks using canonical event names. The installer reads the active host's `targets.*.hook_events` mapping and rewrites event names at install time. No runtime translation layer is needed -- the mapping is resolved once during installation. Host-specific events beyond the vocabulary (e.g., Gemini's `BeforeModel`/`AfterModel`, Claude Code's `SubagentStart`/`SubagentStop`) remain usable via host-specific names for single-host packages.
+
+**Alternatives considered**:
+
+1. **Include all host variants in hooks.json** -- Authors would list every host's event name in hooks.json. Hosts ignore unknown events, so this works, but it leads to duplicated hook definitions for each host and grows linearly with the number of supported hosts. Rejected because the duplication burden falls on every package author.
+2. **Runtime translation by host** -- Each host would natively understand canonical event names and translate them internally. This requires upstream changes to every host's hook system -- changes that ccpkg cannot drive. Rejected because it creates external dependencies that block adoption.
+3. **Convention only (no formal vocabulary)** -- Document suggested names without formalizing them. Leaves authors guessing which names to use and provides no tooling support for validation or translation. Rejected because informal conventions do not scale.
+
+### 12. Update discovery protocol
+
+Packages need a way to discover available updates and security advisories. The question is how much of this behavior the spec should prescribe versus leaving to implementations.
+
+**Decision**: The registry protocol defines version discovery and security advisory endpoints -- the data format that registries expose. Update checking behavior (when to check, how to notify, background vs foreground) is an implementation concern and is deliberately unspecified.
+
+**Rationale**: The spec defines what a version endpoint returns (latest version, version list, checksums, timestamps) and what an advisory looks like (affected versions, severity, description). How an installer uses that data -- whether it checks on every session start, runs as a background task, or only checks on explicit command -- varies by implementation and deployment context. A CI-based installer should not be forced to run background checks. A desktop installer might want push notifications. The spec stays stable while implementations innovate on UX.
+
+**Alternatives considered**:
+
+1. **Spec-mandated update checking** -- Require installers to check for updates at specific intervals. Too prescriptive; some installers run in CI, air-gapped environments, or contexts where background checks are inappropriate. Rejected because it conflates format with behavior.
+2. **No registry support for updates** -- Leave update checking entirely unspecified, with no defined endpoints. Forces implementations to download and parse the full registry index for every update check, which does not scale. Rejected because the registry protocol should support efficient update queries.
+3. **Push-based updates (webhooks)** -- Registries push update notifications to subscribers. Requires persistent infrastructure (webhook receivers, subscription management) that most users and registry operators cannot justify. Rejected because pull-based checking is simpler and sufficient for the expected scale.
+
+### 13. Remote component references
+
+Not every skill needs the overhead of a full `.ccpkg` archive. A single `SKILL.md` file hosted on GitHub or a CDN should be referenceable directly.
+
+**Decision**: Components may reference remote HTTPS URLs instead of local paths. Remote references require mandatory SHA-256 checksums and support local caching with TTL-based expiry. The structured component form adds `url`, `checksum`, and `cache_ttl` fields alongside the existing `path` field.
+
+**Rationale**: Lightweight distribution matters for the long tail of single-skill packages. A package author who maintains one SKILL.md should not need to create a ZIP archive, publish it, and manage versions just to share it. Checksums are mandatory because mutable URLs are a security risk -- without verification, a URL could serve different (potentially malicious) content than what the package author tested. Caching with offline fallback ensures remote skills work without network access after the initial fetch, maintaining the offline-friendly principle that self-contained archives embody.
+
+**Alternatives considered**:
+
+1. **Archive-only distribution** -- Require everything to ship as a `.ccpkg`. Simpler but forces overhead for single-file skills and discourages lightweight sharing. Rejected because the overhead is disproportionate to the content.
+2. **Remote references without checksums** -- Allow URL references but make checksum optional. Too risky; mutable URLs could serve malicious content without detection. Rejected because integrity verification is non-negotiable for remote content.
+3. **Content-addressed storage only** -- Use content hashes as URLs (like IPFS or git blob refs). More secure but requires infrastructure most authors do not have and adds complexity to the authoring workflow. Rejected because it raises the barrier to entry without proportional benefit.
+
+### 14. Cross-platform host strategy
+
+The ccpkg format targets multiple AI coding assistant hosts, but each host has fundamentally different installation and extension mechanisms. The question is what the spec should define versus what it should leave to per-host installers.
+
+**Decision**: The spec defines a component portability matrix and standardized `targets` fields (`hook_events`, `mcp_env_prefix`, `instructions_file`) to enable cross-platform packages. Per-component `hosts` scoping lets authors include host-specific variants of components within a single package. How packages are actually installed on each host is an implementation concern.
+
+**Rationale**: Research confirms the divergence. Claude Code uses `extraKnownMarketplaces` and plugin directories. Copilot uses `copilot-setup-steps.yml` GitHub Actions workflows and `.github/agents/`. Gemini CLI uses `.gemini/extensions/` with `gemini-extension.json` manifests. OpenCode uses `.opencode/plugins/` with TypeScript modules. Codex CLI uses `.codex/` with TOML config. Trying to encode all of these mechanisms in the spec would couple it to current host implementations and break when hosts evolve. Instead, the spec defines what the package author declares (components, targets, host scoping) and leaves the how-to-install question to each host's installer adapter.
+
+**Alternatives considered**:
+
+1. **Host-specific manifest sections** -- Add dedicated sections like `copilot_config`, `gemini_config` in the manifest for each host's requirements. Couples the spec to specific hosts; breaks when new hosts emerge or existing hosts change their mechanisms. Rejected because the spec should be host-agnostic.
+2. **Separate manifests per host** -- Generate one manifest per target host. Violates the "one package, many hosts" principle and multiplies the author's maintenance burden. Rejected because it undermines the core portability goal.
+3. **Spec-defined install commands per host** -- Specify the exact install steps for each host (e.g., "for Copilot, create `copilot-setup-steps.yml` with these contents"). Conflates specification with implementation and requires spec updates whenever a host changes its install mechanism. Rejected because it makes the spec fragile and couples it to implementation details.
+
+---
+
+### 15. Instructions Assembly — Base + Per-Host Overlays
+
+**Decision**: The `components.instructions` field supports both a simple string form (single file) and a structured form declaring a base file with optional per-host overlay files. Overlays declare their assembly position (`append`, `prepend`, or `insert` at a named marker) via YAML frontmatter. The installer assembles the final instructions output per host at install time.
+
+**Rationale**: The original "one file, copy everywhere" model is too rigid for real-world packages. Package authors need shared context that applies to all hosts (project conventions, error handling patterns, tool usage guidelines) combined with host-specific tuning (e.g., "use Claude Code's subagent spawning" or "enable Copilot agent mode"). Rather than maintaining entirely separate instruction files per host (which defeats the shared-base purpose), the assembly model lets authors write common content once and layer host-specific additions. Three positioning strategies cover real needs: append for additive content, prepend for prerequisite notices, and marker-based insertion for content that belongs mid-document. Overlay frontmatter keeps the positioning declaration co-located with the content it governs.
+
+**Alternatives considered**:
+
+1. **Separate instruction files per host** -- Each host gets its own complete file (`claude-instructions.md`, `copilot-instructions.md`). Simple to implement but leads to content duplication. When shared content changes, authors must update N files. Rejected because it undermines the DRY principle and scales poorly with host count.
+2. **Template language with conditionals** -- Use a templating syntax (e.g., Handlebars, Jinja) with `{{#if host == "claude"}}` blocks. Powerful but introduces a template engine dependency, makes the raw files hard to read, and is overkill for what is typically "shared base + small per-host additions." Rejected for complexity.
+3. **mappings.json only (previous design)** -- Map a single canonical file to host-specific filenames without any content variation. Already proven insufficient — the filename mapping exists via `targets.*.instructions_file`, but the content is identical everywhere. Superseded by the assembly model which adds content variation on top of filename mapping.
+
 ---
 
 ## Relationship to Existing Specifications
@@ -391,6 +461,10 @@ Dependency resolution between packages adds significant complexity (version solv
 **Decision: Consistent with mcpb -- checksums in v1, signing deferred.**
 
 The mcpb format has no native signing or checksums, relying on source reputation and manual inspection. ccpkg already improves on this by including a `checksum` field (SHA-256) in the manifest for integrity verification. Formal cryptographic signing (GPG, sigstore, minisign) is deferred to a future spec version. The `checksum` field and `/ccpkg:verify` command provide baseline integrity verification that mcpb lacks, while keeping v1 simple and shippable.
+
+### 7. Host-specific event names
+
+**Resolved**: Define a canonical vocabulary (`pre-tool-use`, `post-tool-use`, `session-start`, `session-end`, `notification`, `error`, `pre-compact`, `user-prompt-submit`) and map to host-native names via `targets.*.hook_events`. Installers rewrite event names at install time. Packages may also use host-native names directly for single-host packages.
 
 ---
 
