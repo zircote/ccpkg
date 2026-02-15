@@ -981,15 +981,11 @@ Lazy loading minimizes startup overhead by deferring component activation until 
 
 ### Startup Behavior
 
-At session start, the host performs the following:
+Claude Code already implements lazy loading for skills: frontmatter metadata (name and description) is loaded at startup for discovery, while the full SKILL.md body is loaded on invocation via the Skill tool. This same pattern applies to other component types.
 
-1. Read the lockfile(s) (user and project scope).
-2. For each installed package, load **only** the manifest metadata: `name`, `description`, and the `components` declaration.
-3. Register skill and agent names and descriptions for discovery (so the LLM can decide when to activate them).
-4. Register command names and descriptions for slash-command completion.
-5. Register hook event bindings (but do not execute hook scripts).
+ccpkg leverages this existing behavior by placing well-formed component files (SKILL.md, AGENT.md, commands, hooks) in standard plugin directories. No custom host-level lockfile reader is required — the host discovers ccpkg plugins via `extraKnownMarketplaces` → directory source → standard plugin component discovery.
 
-The host MUST NOT read full `SKILL.md`, `AGENT.md`, or command file contents at startup.
+At session start, the host scans the `~/.ccpkg/plugins/` directory (registered via `extraKnownMarketplaces`), reads each plugin's `.claude-plugin/plugin.json`, and indexes component metadata for discovery. Full component content is deferred until invocation.
 
 ### On-Demand Loading
 
@@ -1001,6 +997,8 @@ The host MUST NOT read full `SKILL.md`, `AGENT.md`, or command file contents at 
 | Hook | Host event fires matching the hook's event type | Hook script executed |
 | MCP server | First tool invocation targeting the server | Server process started |
 | LSP server | First file opened matching the server's language scope | Server process started |
+
+> **Note:** These behaviors are provided by the host application's existing plugin runtime. ccpkg does not implement a custom lazy loading mechanism.
 
 ---
 
