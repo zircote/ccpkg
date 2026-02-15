@@ -1111,6 +1111,14 @@ The lockfile records the state of all installed packages at a given scope. It en
         "commands": ["commands/run-tests.md"],
         "hooks": "hooks/hooks.json",
         "mcp": "mcp/.mcp.json"
+      },
+      "remote_sources": {
+        "skills/cloud-helper": {
+          "url": "https://example.com/skills/cloud-helper/SKILL.md",
+          "checksum": "sha256:b2c3d4e5...",
+          "fetched_at": "2026-02-14T12:00:00Z",
+          "cache_ttl": 86400
+        }
       }
     },
     "my-dev-plugin": {
@@ -1160,6 +1168,16 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `merged_mcp_servers` | `string[]` | MCP server names merged into the host's `.mcp.json` during install. Used for clean removal on uninstall. |
 | `config_keys` | `string[]` | Config variable names stored in the host's settings. Used for clean removal on uninstall. |
 | `components` | `object` | Mirror of the manifest `components` object for quick reference. |
+| `remote_sources` | `object` | Map of component path to remote source metadata. Only present for packages with remote component references. Keys are component identifiers; values are objects with `url`, `checksum`, `fetched_at`, and `cache_ttl`. |
+
+**Remote source entry fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | `string` | The URL from which the component was fetched |
+| `checksum` | `string` | SHA-256 checksum of the fetched content |
+| `fetched_at` | `string` | ISO 8601 timestamp of last successful fetch |
+| `cache_ttl` | `number` | Cache duration in seconds from the manifest declaration |
 
 ### Usage
 
