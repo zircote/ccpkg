@@ -144,14 +144,14 @@ ccpkg itself is a Claude Code plugin. It uses all four extension types available
 
 Packages install to one of two locations:
 
-- **User scope**: `~/.claude/packages/` -- available in all projects for this user.
-- **Project scope**: `<project>/.claude/packages/` -- available only in this project, committable to version control.
+- **User scope**: `~/.ccpkg/plugins/{name}/` -- available in all projects for this user. This directory is registered as a plugin marketplace via `extraKnownMarketplaces` in `~/.claude/settings.json`.
+- **Project scope**: `{project}/.ccpkg/plugins/{name}/` -- available only in this project, committable to version control. Registered via `extraKnownMarketplaces` in `{project}/.claude/settings.json`.
 
 **Resolution order**: Explicit flag (`--user` or `--project`) wins. If no flag, the manifest's `scope` hint is used. If no hint, default is user scope.
 
 **Why user-wins?** The user is the one who has to live with where the package lands. Author hints are suggestions, not mandates. A team-shared linting plugin might suggest project scope, but an individual user might prefer it globally.
 
-**Per-scope lockfiles**: Each scope has its own lockfile. The project lockfile (`<project>/.claude/ccpkg-lock.json`) is committable and shareable -- team members get identical package versions. The user lockfile (`~/.claude/ccpkg-lock.json`) is personal.
+**Per-scope lockfiles**: Each scope has its own lockfile. The project lockfile (`{project}/.ccpkg/ccpkg-lock.json`) is committable and shareable -- team members get identical package versions. The user lockfile (`~/.ccpkg/ccpkg-lock.json`) is personal.
 
 ### 4. Configuration model
 
@@ -250,6 +250,60 @@ Registries solve discovery. But a mandatory central registry creates a single po
 
 **Discovery via search**: `/ccpkg:search` queries configured registries, merges results, and presents them with trust signals. This is the experience gap between "browse GitHub repos" and "find the right package."
 
+### 9. Plugin system integration
+
+ccpkg packages install as Claude Code plugins. This is the fundamental integration mechanism -- not file copying, not symlink tricks, but full participation in the host's plugin system.
+
+**Bootstrap**: On first use, ccpkg registers itself as a plugin marketplace by adding an `extraKnownMarketplaces` entry to the user's `settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "ccpkg": {
+      "source": {
+        "source": "directory",
+        "path": "~/.ccpkg/plugins"
+      }
+    }
+  }
+}
+```
+
+The `directory` source type tells Claude Code to scan `~/.ccpkg/plugins/` for plugins at startup. Every subdirectory containing a valid `.claude-plugin/plugin.json` is discovered automatically.
+
+**Install registration**: After extracting a package to `~/.ccpkg/plugins/{name}/`, the installer generates `.claude-plugin/plugin.json` from the manifest and adds `{name}@ccpkg: true` to `enabledPlugins` in `settings.json`. This two-step registration (marketplace directory + enabled flag) mirrors how Claude Code's built-in marketplace installation works.
+
+**Why this approach over alternatives?**
+
+- **Direct file placement in `~/.claude/skills/`**: Does not support namespacing. User-level skills and commands placed in `~/.claude/skills/` or `~/.claude/commands/` cannot be namespaced -- subdirectories are flattened. This would cause name collisions between packages.
+- **Manipulating `installed_plugins.json` directly**: This is Claude Code's internal plugin registry. Writing to it works but is an implementation detail, not a supported API. The `extraKnownMarketplaces` mechanism is the documented, stable entry point for third-party plugin sources.
+- **Using `--plugin-dir` CLI flag**: Session-only, no persistence. Useful for quick testing but not for installed packages.
+
+**Trade-off**: This approach requires a session restart after install because `installed_plugins.json` is read at startup only. There is no API to notify Claude Code of new plugins mid-session. Hot-reload is a future host integration target (see specification Appendix D).
+
+### 10. Automatic namespacing
+
+Namespacing is handled entirely by the host's plugin system. ccpkg does not edit files, rewrite frontmatter, or manipulate component names.
+
+**How it works**: The `name` field in `manifest.json` maps to the `name` field in the generated `.claude-plugin/plugin.json`. The host plugin system uses this name as the namespace prefix for all components within the plugin. A package named `code-tools` with a skill in `skills/review/SKILL.md` becomes `/code-tools:review` automatically.
+
+**Component name derivation**:
+- Skill names: derived from the **skill directory name** (not the `name` field in SKILL.md frontmatter)
+- Command names: derived from the **command file name** (minus the `.md` extension)
+- Other components (hooks, agents): follow the plugin's naming conventions
+
+**What ccpkg does NOT do**:
+- Edit SKILL.md frontmatter to inject namespace prefixes
+- Rename files or directories to include the package name
+- Create colon-prefixed directory names (e.g., `code-tools:review/`)
+- Generate any namespace mapping files
+
+**Why this was chosen over alternatives**:
+
+- **Editing SKILL.md frontmatter**: Fragile. Changes would be overwritten by `ccpkg update`. Author-written content should not be modified by the installer. Breaks the principle that the archive is immutable after packing.
+- **Colon-prefixed directory names**: Filesystem-unfriendly. Colons are illegal in Windows paths and awkward in shell commands. The plugin system handles the colon-separated namespace presentation without requiring it in the filesystem.
+- **Namespace mapping file**: Unnecessary indirection. The host plugin system already provides this mapping. Adding a ccpkg-specific mapping would create a second source of truth.
+
 ---
 
 ## Relationship to Existing Specifications
@@ -297,9 +351,28 @@ The npm model: `manifest.json` uses ranges like `^1.2.0` to express compatibilit
 
 ### 3. Dev mode
 
-**Decision: Yes, symlink dev mode via `/ccpkg:link`.**
+**Decision: Symmetric link/unlink with full plugin registration.**
 
-`/ccpkg:link ./path/to/my-plugin` creates a symlink from the packages directory to a local directory. Changes to the source reflect immediately without re-packing. Modeled after `npm link` and lazy.nvim's `dir` option. Essential for package authors iterating on skills, hooks, and commands. The lockfile records linked packages with a `"source": "link"` field so they are distinguishable from installed archives.
+Dev mode uses a symmetric pair of operations that mirror the install/uninstall lifecycle:
+
+**`/ccpkg:link ~/Projects/my-plugin`:**
+1. Validate the directory contains a valid `manifest.json`
+2. Prompt for required config values (same as install)
+3. Generate `.claude-plugin/plugin.json` inside the source directory (from manifest metadata)
+4. Create symlink: `~/.ccpkg/plugins/{name}` → source directory
+5. Add `{name}@ccpkg` to `enabledPlugins` in `settings.json`
+6. Render MCP/LSP templates with config substitution
+7. Write lockfile entry with `"source": "link:/absolute/path"`, `"linked": true`, and `"generated_plugin_json": true` (if plugin.json was created by ccpkg, not pre-existing)
+
+**`/ccpkg:unlink my-plugin`:**
+1. Remove symlink from `~/.ccpkg/plugins/`
+2. Remove `.claude-plugin/` from source directory ONLY if the lockfile has `"generated_plugin_json": true` (preserves author-created plugin.json files)
+3. Remove `{name}@ccpkg` from `enabledPlugins`
+4. Remove merged MCP server entries
+5. Remove lockfile entry
+6. Do NOT delete the source directory
+
+**Quick testing with `--plugin-dir`**: For one-off testing without any side effects, Claude Code's `--plugin-dir` CLI flag loads a plugin for a single session only. No symlinks, no lockfile entries, no settings changes. This complements `link`/`unlink` for rapid iteration before committing to a full dev link.
 
 ### 4. Name conflicts
 
