@@ -1252,6 +1252,16 @@ The lockfile records the state of all installed packages at a given scope. It en
         "skills": ["skills/dev-helper"]
       }
     }
+  },
+  "shared_mcp_servers": {
+    "context7": {
+      "origin": "command::npx -y @anthropic/context7-mcp",
+      "version": "1.3.0",
+      "declared_by": ["plugin-a", "plugin-b"],
+      "active_source": "plugin-b",
+      "dedup": true,
+      "installed_at": "2026-02-15T12:00:00Z"
+    }
   }
 }
 ```
@@ -1291,6 +1301,19 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `checksum` | `string` | SHA-256 checksum of the fetched content |
 | `fetched_at` | `string` | ISO 8601 timestamp of last successful fetch |
 | `cache_ttl` | `number` | Cache duration in seconds from the manifest declaration |
+
+**Shared MCP server fields:**
+
+The `shared_mcp_servers` top-level field tracks MCP servers that are declared by multiple packages. Keys are MCP server key names.
+
+| Field | Type | Description |
+|---|---|---|
+| `origin` | `string` | Identity origin string derived from server mode (see Server Deduplication in [Component Types](#component-types)). |
+| `version` | `string \| null` | Resolved winning version. `null` if the server version cannot be determined. |
+| `declared_by` | `string[]` | Package names that bundle this server. |
+| `active_source` | `string` | Name of the package whose MCP template is currently rendered in the host config. |
+| `dedup` | `boolean` | Whether deduplication is active for this server. Defaults to `true`. When `false`, each package installs its own independent copy. |
+| `installed_at` | `string` | ISO 8601 timestamp of the last resolution event. |
 
 ### Usage
 
