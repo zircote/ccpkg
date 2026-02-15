@@ -1,0 +1,147 @@
+---
+# Specification labels
+- name: spec
+  color: "1d76db"
+  description: >-
+    Changes to the ccpkg specification
+- name: proposal
+  color: "c5def5"
+  description: >-
+    Specification change proposal
+- name: schema
+  color: "0e8a16"
+  description: >-
+    Manifest JSON Schema changes
+- name: host-adapter
+  color: "d4c5f9"
+  description: >-
+    Host adapter support or mapping
+
+# Component labels
+- name: "component: skills"
+  color: "fbca04"
+  description: Skills component type
+- name: "component: agents"
+  color: "fbca04"
+  description: Agents component type
+- name: "component: hooks"
+  color: "fbca04"
+  description: Hooks component type
+- name: "component: mcp"
+  color: "fbca04"
+  description: MCP server component type
+- name: "component: lsp"
+  color: "fbca04"
+  description: LSP server component type
+- name: "component: instructions"
+  color: "fbca04"
+  description: Instructions assembly
+
+# Host labels
+- name: "host: claude-code"
+  color: "cc6633"
+  description: Claude Code adapter
+- name: "host: copilot"
+  color: "cc6633"
+  description: GitHub Copilot adapter
+- name: "host: codex-cli"
+  color: "cc6633"
+  description: OpenAI Codex CLI adapter
+- name: "host: gemini-cli"
+  color: "cc6633"
+  description: Google Gemini CLI adapter
+- name: "host: opencode"
+  color: "cc6633"
+  description: OpenCode adapter
+
+# Workflow labels
+- name: website
+  color: "006b75"
+  description: >-
+    ccpkg.dev website content or build
+- name: registry
+  color: "5319e7"
+  description: >-
+    Registry protocol or infrastructure
+- name: tooling
+  color: "bfd4f2"
+  description: >-
+    CLI tooling and developer experience
+- name: security
+  color: "b60205"
+  description: >-
+    Security advisories or vulnerabilities
+- name: breaking-change
+  color: "e11d48"
+  description: >-
+    Backward-incompatible change
+
+# Priority labels
+- name: "priority: critical"
+  color: "b60205"
+  description: >-
+    Must be resolved immediately
+- name: "priority: high"
+  color: "d93f0b"
+  description: >-
+    Should be resolved soon
+- name: "priority: medium"
+  color: "fbca04"
+  description: >-
+    Normal priority
+- name: "priority: low"
+  color: "0e8a16"
+  description: >-
+    Nice to have
+
+# Status labels
+- name: "status: needs-discussion"
+  color: "d876e3"
+  description: >-
+    Requires community input
+- name: "status: ready"
+  color: "0e8a16"
+  description: >-
+    Ready for implementation
+- name: "status: blocked"
+  color: "b60205"
+  description: >-
+    Blocked by dependency or decision
+
+# Default GitHub labels (updated descriptions)
+- name: bug
+  color: "d73a4a"
+  description: >-
+    Something is not working correctly
+- name: documentation
+  color: "0075ca"
+  description: >-
+    Documentation improvements
+- name: duplicate
+  color: "cfd3d7"
+  description: >-
+    Duplicate of an existing issue
+- name: enhancement
+  color: "a2eeef"
+  description: >-
+    New feature or request
+- name: "good first issue"
+  color: "7057ff"
+  description: >-
+    Good for newcomers
+- name: "help wanted"
+  color: "008672"
+  description: >-
+    Extra attention is needed
+- name: invalid
+  color: "e4e669"
+  description: >-
+    Not a valid issue
+- name: question
+  color: "d876e3"
+  description: >-
+    Further information is requested
+- name: wontfix
+  color: "ffffff"
+  description: >-
+    This will not be worked on

@@ -1,0 +1,58 @@
+---
+name: Feature Request
+description: >-
+  Suggest tooling, CLI, or ecosystem
+  improvements
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this template for tooling, CLI,
+        registry, or ecosystem feature requests.
+        For specification changes, use the
+        Specification Change template instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: >-
+        Which area does this feature relate to?
+      options:
+        - CLI tooling (ccpkg)
+        - Registry protocol
+        - Package validation
+        - Build/packaging pipeline
+        - Developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: >-
+        Brief description of the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: >-
+        What problem does this solve? What
+        workflow does it improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: >-
+        Describe how you envision this working.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: >-
+        What other approaches were considered?

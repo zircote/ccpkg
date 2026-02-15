@@ -1,0 +1,64 @@
+---
+name: Schema Issue
+description: >-
+  Report a problem or propose a change to the
+  manifest JSON Schema
+labels: ["schema"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this template for issues specific to
+        manifest.schema.json or other JSON Schema
+        files.
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: >-
+        What kind of schema issue is this?
+      options:
+        - Schema validation too strict
+        - Schema validation too permissive
+        - Missing field or constraint
+        - Schema does not match spec text
+        - Schema syntax error
+        - New field request
+    validations:
+      required: true
+  - type: input
+    id: schema-path
+    attributes:
+      label: Schema Path
+      description: >-
+        JSON path to the affected field.
+      placeholder: >-
+        e.g., $.properties.components
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Describe the schema issue in detail.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Manifest
+      description: >-
+        Provide a manifest snippet that
+        demonstrates the issue.
+      render: json
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Validation Result
+      description: >-
+        Should the example above pass or fail
+        validation? What error message is
+        expected?
+    validations:
+      required: true

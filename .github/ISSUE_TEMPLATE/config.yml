@@ -1,0 +1,9 @@
+---
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: >-
+      https://github.com/zircote/ccpkg/discussions
+    about: >-
+      Ask questions and discuss ideas before
+      filing an issue

@@ -1,0 +1,67 @@
+---
+name: Host Adapter Request
+description: >-
+  Request support for a new AI coding assistant
+  or report a host adapter issue
+labels: ["host-adapter"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this template for issues related to
+        AI coding assistant host adapters, new
+        host support, adapter mapping problems,
+        or portability gaps.
+  - type: dropdown
+    id: request-type
+    attributes:
+      label: Request Type
+      description: >-
+        What kind of host adapter work is needed?
+      options:
+        - New host adapter
+        - Fix existing adapter mapping
+        - Missing component type support
+        - Hook event mapping issue
+        - Instructions assembly issue
+        - MCP/LSP integration gap
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host Application
+      description: >-
+        Which AI coding assistant does this
+        relate to?
+      placeholder: >-
+        e.g., Claude Code, GitHub Copilot
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Describe the adapter issue or new host
+        request in detail.
+    validations:
+      required: true
+  - type: textarea
+    id: host-docs
+    attributes:
+      label: Host Documentation
+      description: >-
+        Links to the host application's
+        extension/plugin documentation.
+  - type: textarea
+    id: mapping
+    attributes:
+      label: Component Mapping
+      description: |
+        For new hosts, describe how ccpkg
+        components map to this host's
+        extension system.
+        For existing hosts, describe the
+        specific mapping that is incorrect
+        or missing.

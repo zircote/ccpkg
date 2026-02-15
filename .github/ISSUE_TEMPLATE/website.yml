@@ -1,0 +1,50 @@
+---
+name: Website / Documentation
+description: >-
+  Report a problem with the ccpkg.dev website
+  or documentation
+labels: ["documentation", "website"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this template for issues with the
+        ccpkg.dev website content, navigation,
+        or build.
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: >-
+        What kind of website issue is this?
+      options:
+        - Content out of sync with spec
+        - Broken link or navigation
+        - Missing documentation page
+        - Build or deployment failure
+        - Accessibility issue
+        - Content improvement
+    validations:
+      required: true
+  - type: input
+    id: page-url
+    attributes:
+      label: Page URL or Path
+      description: Which page is affected?
+      placeholder: >-
+        e.g., ccpkg.dev/specification/manifest/
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Describe the documentation issue.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix
+      description: >-
+        If you have a proposed correction,
+        describe it here.

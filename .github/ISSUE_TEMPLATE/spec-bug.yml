@@ -1,0 +1,64 @@
+---
+name: Specification Bug
+description: >-
+  Report an error, ambiguity, or contradiction
+  in the specification
+labels: ["spec", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this template to report problems in
+        the specification text, schema, or
+        examples.
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: Bug Type
+      description: >-
+        What kind of problem did you find?
+      options:
+        - Ambiguous language
+        - Contradiction between sections
+        - Incorrect example
+        - Missing normative requirement
+        - Schema does not match spec text
+        - Broken cross-reference
+        - Typo or formatting error
+    validations:
+      required: true
+  - type: input
+    id: spec-section
+    attributes:
+      label: Specification Section
+      description: >-
+        Which section contains the problem?
+      placeholder: >-
+        e.g., Section 3.2 - Manifest Schema
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Describe the problem. Quote the relevant
+        spec text if possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: >-
+        What should the specification say or how
+        should it be interpreted?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix
+      description: >-
+        If you have a proposed correction,
+        describe it here.
