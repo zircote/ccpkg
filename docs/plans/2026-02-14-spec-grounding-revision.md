@@ -1,4 +1,4 @@
-# ccpkg Spec Grounding Revision — Implementation Plan
+# ccpkg Spec Grounding Revision. Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -21,35 +21,35 @@ Claude Code's plugin system provides automatic namespacing via `.claude-plugin/p
 - Plugin with `{"name": "my-package"}` + skill in `skills/my-skill/SKILL.md` = `/my-package:my-skill`
 - Namespace prefix: driven by `plugin.json` `name` field (NOT directory name, NOT SKILL.md frontmatter)
 - Component name within namespace: driven by skill **directory name** (NOT frontmatter `name`)
-- User-level skills (`~/.claude/skills/`) CANNOT be namespaced — subdirectories flatten
-- User-level commands (`~/.claude/commands/`) CANNOT be namespaced — subdirectories flatten
+- User-level skills (`~/.claude/skills/`) CANNOT be namespaced. subdirectories flatten
+- User-level commands (`~/.claude/commands/`) CANNOT be namespaced. subdirectories flatten
 - There is NO programmatic API to register namespaced components outside the plugin system
 
 **Implication:** ccpkg packages MUST be installed as Claude Code plugins to get namespacing.
 
 ### Finding 2: extraKnownMarketplaces Is the Official Registration Entry Point
 
-Claude Code supports third-party plugin sources via `extraKnownMarketplaces` in `settings.json`. This is the documented, supported API — NOT `known_marketplaces.json` (which is internal).
+Claude Code supports third-party plugin sources via `extraKnownMarketplaces` in `settings.json`. This is the documented, supported API. NOT `known_marketplaces.json` (which is internal).
 
 Seven source types are supported:
-1. `github` — GitHub repositories
-2. `git` — any Git URL
-3. `url` — hosted marketplace.json
-4. `npm` — npm packages
-5. `file` — local marketplace.json file
-6. `directory` — local directory of plugins
-7. `hostPattern` — regex host matching
+1. `github`. GitHub repositories
+2. `git`. any Git URL
+3. `url`. hosted marketplace.json
+4. `npm`. npm packages
+5. `file`. local marketplace.json file
+6. `directory`. local directory of plugins
+7. `hostPattern`. regex host matching
 
 **Implication:** ccpkg registers as a marketplace using the `directory` source type, pointing at `~/.ccpkg/plugins/`. Claude Code auto-discovers plugins in that directory.
 
 ### Finding 3: Six Plugin Loading Mechanisms Exist
 
-1. **Marketplace installation** — via `/plugin` UI or `claude plugin install`
-2. **`--plugin-dir` CLI flag** — session-only, no persistence, for quick testing
-3. **CLI commands** — `claude plugin install/uninstall/enable/disable`
-4. **Interactive `/plugin` UI** — 4-tab manager (Discover, Installed, Marketplaces, Errors)
-5. **Project-level `.claude/settings.json`** — team-shared, committed to git
-6. **Managed settings** — enterprise/org level, highest precedence, read-only
+1. **Marketplace installation**. via `/plugin` UI or `claude plugin install`
+2. **`--plugin-dir` CLI flag**. session-only, no persistence, for quick testing
+3. **CLI commands**. `claude plugin install/uninstall/enable/disable`
+4. **Interactive `/plugin` UI**. 4-tab manager (Discover, Installed, Marketplaces, Errors)
+5. **Project-level `.claude/settings.json`**. team-shared, committed to git
+6. **Managed settings**. enterprise/org level, highest precedence, read-only
 
 Scope precedence: Managed > Local > Project > User
 
@@ -74,9 +74,9 @@ Confirmed: no hot-reload mid-session. Changes to plugin registration take effect
 - Pack/verify commands via ZIP + manifest validation
 
 **Aspirational (requires Claude Code application changes):**
-- Hot-reload after install (no session restart) — no API to notify Claude Code of new plugins mid-session
-- Host-aware lockfile loading — Claude Code does not read `ccpkg-lock.json` at startup
-- Runtime component state machine (Idle → Active → Idle) — no host-managed state tracking
+- Hot-reload after install (no session restart). no API to notify Claude Code of new plugins mid-session
+- Host-aware lockfile loading. Claude Code does not read `ccpkg-lock.json` at startup
+- Runtime component state machine (Idle -> Active -> Idle). no host-managed state tracking
 
 ### Finding 6: Install Architecture
 
@@ -105,13 +105,13 @@ Confirmed: no hot-reload mid-session. Changes to plugin registration take effect
 6. Remove lockfile entry
 7. Inform user: session restart to deactivate
 
-### Finding 7: Dev Mode — Symmetric Link/Unlink
+### Finding 7: Dev Mode. Symmetric Link/Unlink
 
 **`/ccpkg:link ~/Projects/my-plugin`:**
 1. Validate directory has valid `manifest.json`
 2. Prompt for required config values
 3. Generate `.claude-plugin/plugin.json` inside source directory (from manifest)
-4. Create symlink `~/.ccpkg/plugins/{name}` → source directory
+4. Create symlink `~/.ccpkg/plugins/{name}` -> source directory
 5. Add to `enabledPlugins`, render templates, write lockfile with `"source": "link:/absolute/path"`
 6. Record `generated_plugin_json: true` in lockfile if plugin.json was created (not pre-existing)
 
@@ -128,24 +128,24 @@ Confirmed: no hot-reload mid-session. Changes to plugin registration take effect
 The lockfile serves dual purpose: reproducibility record AND uninstall manifest.
 
 Expanded fields per package entry:
-- `installed_files` — list of all files written during install
-- `merged_mcp_servers` — MCP server names merged into `.mcp.json`
-- `merged_hooks` — hook entries merged into settings
-- `config_keys` — config variable names stored in settings
-- `generated_plugin_json` — boolean, whether `.claude-plugin/plugin.json` was generated
-- `linked` — boolean, whether this is a dev-linked package
-- `source` — URL, file path, or `link:/path` for dev mode
+- `installed_files`. list of all files written during install
+- `merged_mcp_servers`. MCP server names merged into `.mcp.json`
+- `merged_hooks`. hook entries merged into settings
+- `config_keys`. config variable names stored in settings
+- `generated_plugin_json`. boolean, whether `.claude-plugin/plugin.json` was generated
+- `linked`. boolean, whether this is a dev-linked package
+- `source`. URL, file path, or `link:/path` for dev mode
 
 ### Finding 9: Two Lockfiles, Two Audiences
 
-- `installed_plugins.json` — Claude Code's internal plugin registry (for host discovery)
-- `ccpkg-lock.json` — ccpkg's lifecycle manifest (source URLs, checksums, config hashes, provenance)
+- `installed_plugins.json`. Claude Code's internal plugin registry (for host discovery)
+- `ccpkg-lock.json`. ccpkg's lifecycle manifest (source URLs, checksums, config hashes, provenance)
 
 ccpkg writes to BOTH during install. They serve different systems.
 
 ---
 
-## Task 1: Revise Specification — Install Lifecycle Section
+## Task 1: Revise Specification. Install Lifecycle Section
 
 **Files:**
 - Modify: `spec/specification.md` (lines ~730-830, Install Lifecycle section)
@@ -154,7 +154,7 @@ ccpkg writes to BOTH during install. They serve different systems.
 
 Replace the current Mermaid sequence diagram. The new diagram must:
 - Remove the `Host->>User: Components available (no restart required)` step
-- Add explicit `Installer->>Installer: Generate .claude-plugin/plugin.json`
+- Add explicit `Installer->>Installer: Generate.claude-plugin/plugin.json`
 - Add explicit `Installer->>Host: Add to enabledPlugins in settings.json`
 - End with `Installer->>User: Installation complete. Restart session to activate.`
 
@@ -191,7 +191,7 @@ Replace the current 5-step process with the symmetric link/unlink design:
 
 ---
 
-## Task 2: Revise Specification — Add Host Integration Section
+## Task 2: Revise Specification. Add Host Integration Section
 
 **Files:**
 - Modify: `spec/specification.md` (new section after Install Lifecycle, before Lockfile Format)
@@ -219,7 +219,7 @@ Document:
 Document:
 - User scope: `extraKnownMarketplaces` in `~/.claude/settings.json`
 - Project scope: `extraKnownMarketplaces` in `{project}/.claude/settings.json`
-- Project settings are committed to git — team members get prompted to install
+- Project settings are committed to git. team members get prompted to install
 - Managed scope: enterprise admins can allowlist ccpkg via `strictKnownMarketplaces`
 - Scope precedence: Managed > Local > Project > User
 
@@ -227,7 +227,7 @@ Document:
 
 ---
 
-## Task 3: Revise Specification — Rewrite Lazy Loading Section
+## Task 3: Revise Specification. Rewrite Lazy Loading Section
 
 **Files:**
 - Modify: `spec/specification.md` (lines ~896-923, Lazy Loading section)
@@ -238,7 +238,7 @@ Replace the current 5-step host-reads-lockfile description with:
 - State that Claude Code already implements lazy loading for skills: frontmatter (name + description) is loaded at startup, full SKILL.md body is loaded on invocation via the Skill tool
 - ccpkg leverages this existing behavior by placing well-formed SKILL.md files in standard plugin directories
 - No custom host-level lockfile reader is required
-- The host discovers ccpkg plugins via `extraKnownMarketplaces` → directory source → standard plugin component discovery
+- The host discovers ccpkg plugins via `extraKnownMarketplaces` -> directory source -> standard plugin component discovery
 
 **Step 2: Keep "On-Demand Loading" table**
 
@@ -256,7 +256,7 @@ Add a note: "These behaviors are provided by the host application's existing plu
 
 ---
 
-## Task 4: Revise Specification — Expand Lockfile Schema
+## Task 4: Revise Specification. Expand Lockfile Schema
 
 **Files:**
 - Modify: `spec/specification.md` (lines ~831-895, Lockfile Format section)
@@ -285,7 +285,7 @@ Show a complete example with all new fields, including one installed package and
 
 ---
 
-## Task 5: Revise Specification — Add Aspirational Appendix
+## Task 5: Revise Specification. Add Aspirational Appendix
 
 **Files:**
 - Modify: `spec/specification.md` (new Appendix D after Appendix C)
@@ -294,18 +294,18 @@ Show a complete example with all new fields, including one installed package and
 
 Move all aspirational content here with clear framing:
 
-Section D.1 — Hot-Reload After Install:
+Section D.1. Hot-Reload After Install:
 - Description: Components become available immediately after install without session restart
 - Requires: A host API or file-watch mechanism to detect new plugins mid-session
 - Current behavior: Session restart required
 
-Section D.2 — Host-Aware Lockfile Loading:
+Section D.2. Host-Aware Lockfile Loading:
 - Description: Host reads `ccpkg-lock.json` at startup for optimized package discovery
 - Requires: Host application to understand ccpkg lockfile format
 - Current behavior: Host discovers packages via `extraKnownMarketplaces` and standard plugin directories
 
-Section D.3 — Runtime Component State Machine:
-- Description: Components track Idle → Active → Idle lifecycle states
+Section D.3. Runtime Component State Machine:
+- Description: Components track Idle -> Active -> Idle lifecycle states
 - Requires: Host-managed activation tracking per component
 - Current behavior: Components are either installed (files exist in plugin directory) or not
 
@@ -313,7 +313,7 @@ Section D.3 — Runtime Component State Machine:
 
 ---
 
-## Task 6: Revise Specification — Update Archive Directory Structure
+## Task 6: Revise Specification. Update Archive Directory Structure
 
 **Files:**
 - Modify: `spec/specification.md` (lines ~136-169, Directory Structure)
@@ -322,14 +322,14 @@ Section D.3 — Runtime Component State Machine:
 
 The archive structure itself does not change. But add a note after the diagram explaining:
 - At install time, the installer generates `.claude-plugin/plugin.json` from `manifest.json` metadata
-- This generated file is NOT part of the archive — it is a host-specific artifact created during installation
-- The mapping: manifest `name` → plugin.json `name`, manifest `version` → plugin.json `version`, manifest `description` → plugin.json `description`, manifest `author` → plugin.json `author`
+- This generated file is NOT part of the archive. it is a host-specific artifact created during installation
+- The mapping: manifest `name` -> plugin.json `name`, manifest `version` -> plugin.json `version`, manifest `description` -> plugin.json `description`, manifest `author` -> plugin.json `author`
 
 **Step 2: Commit**
 
 ---
 
-## Task 7: Revise Design Document — Add Plugin System Integration
+## Task 7: Revise Design Document. Add Plugin System Integration
 
 **Files:**
 - Modify: `docs/plans/2026-02-14-ccpkg-design.md`
@@ -378,10 +378,10 @@ Replace with the symmetric link/unlink design:
 
 **Step 1: Review schema for any required changes**
 
-The manifest schema itself should NOT change significantly — the manifest is the package author's contract. The `.claude-plugin/plugin.json` generation is an installer concern, not a manifest concern.
+The manifest schema itself should NOT change significantly. the manifest is the package author's contract. The `.claude-plugin/plugin.json` generation is an installer concern, not a manifest concern.
 
 However, verify:
-- The `scope` enum still makes sense (it does — `user`, `project`, `any`)
+- The `scope` enum still makes sense (it does. `user`, `project`, `any`)
 - The `targets` object can accommodate plugin.json generation hints if needed
 - No fields reference the old `~/.claude/packages/` path
 
@@ -424,7 +424,7 @@ Capture the following to mnemonic:
 - `_semantic/decisions`: ccpkg installs as Claude Code plugins via extraKnownMarketplaces directory source
 - `_semantic/decisions`: Namespacing handled by plugin system, not file editing
 - `_semantic/knowledge`: installed_plugins.json is read-only at startup, no hot-reload
-- `_procedural/patterns`: Symmetric link/unlink manages .claude-plugin/plugin.json lifecycle
+- `_procedural/patterns`: Symmetric link/unlink manages.claude-plugin/plugin.json lifecycle
 - `_semantic/knowledge`: Six plugin loading mechanisms in Claude Code (marketplace, --plugin-dir, CLI, /plugin UI, project settings, managed settings)
 
 ---
@@ -461,7 +461,7 @@ Each task ends with a commit. Commit messages follow:
 
 ### What This Plan Does NOT Cover
 
-- Implementation of ccpkg CLI/skills (pack, install, verify, etc.) — that is a separate plan
-- Implementation of the registry protocol — that is a separate plan
-- Testing — no tests exist yet for the spec itself
-- GitHub Pages deployment — the deploy.yml workflow already exists
+- Implementation of ccpkg CLI/skills (pack, install, verify, etc.). that is a separate plan
+- Implementation of the registry protocol. that is a separate plan
+- Testing. no tests exist yet for the spec itself
+- GitHub Pages deployment. the deploy.yml workflow already exists
