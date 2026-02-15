@@ -1018,7 +1018,7 @@ sequenceDiagram
     User->>Installer: Provide config values
     Installer->>Installer: Resolve install scope
     Installer->>Installer: Extract archive to install location
-    Installer->>Installer: Render templates (variable substitution)
+    Installer->>Installer: Render templates + dedup MCP
     Installer->>Installer: Store config values in host settings
     Installer->>Installer: Generate .claude-plugin/plugin.json
     Installer->>Host: Add to enabledPlugins in settings.json
@@ -1053,7 +1053,21 @@ sequenceDiagram
 
    If a previous version exists at the install location, the installer MUST remove it before extraction.
 
-10. **Render templates.** The installer processes `.mcp.json` and `.lsp.json` templates, replacing `${config.VARIABLE_NAME}` markers with resolved values. Rendered files are written to the install location.
+10. **Render templates and deduplicate MCP servers.** The installer processes `.mcp.json` and `.lsp.json` templates, replacing `${config.VARIABLE_NAME}` markers with resolved values. For MCP servers, the installer SHOULD check for duplicates before writing:
+
+    a. For each server entry, compute its identity tuple (key_name, origin) as defined in Server Deduplication (see [Component Types](#component-types)).
+
+    b. If no matching entry exists in `shared_mcp_servers`: render the template, merge into the host config, and add the server to `shared_mcp_servers` with `declared_by` set to the current package.
+
+    c. If a match exists and the incoming version is higher: re-render using the incoming package's template, update `active_source` and `version`, and append the package to `declared_by`.
+
+    d. If a match exists and the incoming version is equal or lower: skip rendering and append the package to `declared_by` only.
+
+    e. If the key_name matches but the origin differs: warn the user and offer resolution options (keep, replace, or install both under distinct keys).
+
+    f. If the user has disabled dedup for this server (`dedup: false`), skip dedup checks and install the server as a separate entry.
+
+    Rendered `.lsp.json` files are written to the install location without deduplication (LSP server dedup is deferred to a future spec version).
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
