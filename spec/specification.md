@@ -171,17 +171,6 @@ example-plugin-1.2.0.ccpkg (ZIP)
 
 Only `manifest.json` is REQUIRED. All other files and directories are OPTIONAL and declared via the `components` field in the manifest.
 
-> **Note:** At install time, the installer generates a `.claude-plugin/plugin.json` file inside the extracted package directory. This generated file is **not** part of the archive — it is a host-specific artifact created during installation. The installer maps manifest fields to plugin.json fields as follows:
->
-> | Manifest Field | plugin.json Field |
-> |---|---|
-> | `name` | `name` |
-> | `version` | `version` |
-> | `description` | `description` |
-> | `author` | `author` |
->
-> Package authors SHOULD NOT include `.claude-plugin/` in their archives. If a `.claude-plugin/plugin.json` is present in the archive, the installer MUST use the generated version (from manifest metadata) and MAY warn the author.
-
 ---
 
 ## Manifest Schema
@@ -205,7 +194,7 @@ The `manifest.json` file is a JSON object that declares the package identity, co
 | `config` | OPTIONAL | `object` | See [Config Object](#config-object). | Declares configuration slots for user-supplied values. |
 | `compatibility` | OPTIONAL | `object` | See [Compatibility Object](#compatibility-object). | Declares host compatibility constraints. |
 | `targets` | OPTIONAL | `object` | See [Targets Object](#targets-object). | Tool-specific adapter mappings. |
-| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | Integrity hash of the archive (excluding the checksum field itself). |
+| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | SHA-256 hash computed over the raw archive bytes (the `.ccpkg` ZIP file), excluding the checksum field itself from the manifest before hashing. See [Checksum Verification](#checksum-verification). |
 
 ### Author Object
 
@@ -313,19 +302,13 @@ Installers SHOULD warn the user if the host does not satisfy the declared compat
 
 The `targets` object provides tool-specific overrides and adapter mappings. Each key is a tool identifier. The value is an object with tool-specific configuration.
 
-The `targets` object supports the following standard fields. Tool-specific adapters MAY define additional fields beyond these.
+The following standard fields are defined. Tool-specific adapters MAY define additional fields.
 
 | Field | Type | Description |
 |---|---|---|
-| `instructions_file` | `string` | Override path for the instructions file on this host |
-| `hook_events` | `object` | Map of canonical event names to host-native event names |
-| `mcp_env_prefix` | `string` | Environment variable prefix for MCP server credential injection |
-
-`instructions_file` — An OPTIONAL string specifying the filename to which the assembled instructions content is written for that tool.
-
-`hook_events` — An OPTIONAL object that maps canonical event names to the host's native event type names. Keys are canonical event names (lowercase-hyphenated); values are the host's native event type strings.
-
-`mcp_env_prefix` — An OPTIONAL string specifying the environment variable prefix the host uses to inject MCP server credentials. For example, Copilot uses `COPILOT_MCP_` while Claude Code uses direct config injection.
+| `instructions_file` | `string` | OPTIONAL. Filename to which assembled instructions are written for this host. |
+| `hook_events` | `object` | OPTIONAL. Maps canonical event names (lowercase-hyphenated keys) to host-native event name strings. |
+| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection (e.g., Copilot uses `COPILOT_MCP_`). |
 
 ```json
 {
@@ -336,7 +319,7 @@ The `targets` object supports the following standard fields. Tool-specific adapt
         "pre-tool-use": "PreToolUse",
         "post-tool-use": "PostToolUse",
         "session-start": "SessionStart",
-        "session-end": "SessionEnd",
+        "session-end": "SessionStop",
         "notification": "Notification",
         "pre-compact": "PreCompact",
         "user-prompt-submit": "UserPromptSubmit"
@@ -639,7 +622,7 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
 
 #### Canonical Event Vocabulary
 
-The event types listed above use Claude Code's naming convention. To enable portable hook definitions that work across multiple hosts, ccpkg defines a canonical (tool-neutral) event vocabulary. Package authors MAY use canonical event names in their `hooks.json` files; the installer translates them to the active host's conventions at install time using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+The event types above use Claude Code's naming convention. ccpkg also defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
 
 **Canonical event names and host mappings:**
 
@@ -648,28 +631,27 @@ The event types listed above use Claude Code's naming convention. To enable port
 | `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
 | `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
 | `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
-| `session-end` | `SessionEnd` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
+| `session-end` | `SessionStop` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
 | `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
 | `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
 | `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
 | `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
 
-A `—` in the table means the host has no equivalent event. The canonical vocabulary covers the portable subset of events that exist on 3+ hosts. Hosts define many additional events beyond this vocabulary.
+A `—` means the host has no equivalent event. The canonical vocabulary covers events supported by 3+ hosts.
 
-**Host-specific events NOT in canonical vocabulary** (these remain host-specific and are not mapped):
+**Host-specific events NOT in canonical vocabulary:**
 
 - **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
 - **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
 - **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
-- **Codex CLI**: (no additional events beyond the two listed)
-- **Copilot**: (no additional events beyond the six listed)
+- **Codex CLI**: (none beyond the two listed)
+- **Copilot**: (none beyond the six listed)
 
 **Usage rules:**
 
-- Package authors MAY use either canonical names or host-specific names in `hooks.json`.
-- When canonical names are used, the installer MUST translate them to the active host's convention using the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
-- When host-specific names are used directly, they work only on that host and are silently ignored by others (existing behavior).
-- Hosts MAY define additional event types beyond this vocabulary; the canonical vocabulary covers the portable subset.
+- Authors MAY use either canonical or host-specific names in `hooks.json`.
+- The installer MUST translate canonical names to the active host's convention via `targets.*.hook_events`.
+- Host-specific names work only on that host and are silently ignored by others.
 
 **Hook Definition:**
 
@@ -716,8 +698,6 @@ A `—` in the table means the host has no equivalent event. The canonical vocab
   ]
 }
 ```
-
-This example uses canonical event names. The installer translates these to the active host's conventions at install time. See [Targets Object](#targets-object) for the `hook_events` mapping.
 
 ### MCP Servers
 
@@ -857,7 +837,7 @@ Instructions are documentation files that provide guidance to the AI coding assi
 
 #### Simple Form
 
-When `components.instructions` is a string, it is a path to a single instructions file. The installer copies this file to the host-specific filename defined in `targets.*.instructions_file`. This is equivalent to the base-only assembly model with no per-host overlays.
+When `components.instructions` is a string, it is a path to a single instructions file. The installer copies it to the filename defined in `targets.*.instructions_file`.
 
 ```json
 "instructions": "instructions/base.md"
@@ -865,7 +845,7 @@ When `components.instructions` is a string, it is a path to a single instruction
 
 #### Structured Form (Base + Overlay Assembly)
 
-When `components.instructions` is an object, it declares a base file and optional per-host overlay files. The installer assembles the final output by combining the base content with the overlay for the active host.
+When `components.instructions` is an object, it declares a base file and optional per-host overlays. The installer assembles the output by combining base content with the active host's overlay.
 
 ```json
 "instructions": {
@@ -1078,13 +1058,13 @@ sequenceDiagram
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
-12. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the install directory from the ccpkg manifest metadata. The mapping is: manifest `name` → plugin.json `name`, manifest `version` → plugin.json `version`, manifest `description` → plugin.json `description`, manifest `author` → plugin.json `author`.
+12. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the install directory from the ccpkg manifest metadata. See [Plugin Registration](#plugin-registration) for the field mapping.
 
 13. **Register with host.** The installer adds `{name}@ccpkg` to the `enabledPlugins` object in the host's settings file (`settings.json`). This registers the package as an enabled plugin for the host to discover on next session start.
 
 14. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root (e.g., `~/.ccpkg/ccpkg-lock.json` for user scope). See [Lockfile Format](#lockfile-format).
 
-15. **Notify user.** The installer writes the plugin to the host's plugin directory and registers it in the host's settings. Components become available on the next session start. Hot-reload of components mid-session is a future host integration target (see [Appendix D](#appendix-d-future-host-integration-targets)).
+15. **Notify user.** The installer informs the user that installation is complete. Components become available on the next session start (see [Appendix D](#appendix-d-future-host-integration-targets) for hot-reload aspirations).
 
 ### Uninstall
 
@@ -1147,7 +1127,7 @@ For quick one-off testing without any persistent side effects, developers can us
 
 ## Host Integration
 
-ccpkg integrates with Claude Code's plugin system to provide namespaced installation and component discovery. Rather than placing files directly in user-level directories (where namespacing is unavailable), ccpkg installs packages as Claude Code plugins and leverages the host's existing plugin runtime for component registration and namespace isolation.
+ccpkg installs packages as Claude Code plugins, leveraging the host's plugin runtime for component registration and namespace isolation.
 
 ### Bootstrap
 
@@ -1170,9 +1150,18 @@ The `directory` source type tells Claude Code to discover plugins by scanning `~
 
 ### Plugin Registration
 
-During installation, ccpkg performs two host-facing registration steps:
+During installation, the installer performs two host-facing steps:
 
-1. **Generate `.claude-plugin/plugin.json`.** The installer creates this file inside the package's install directory, mapping manifest fields to plugin manifest fields (`name`, `version`, `description`, `author`). This file is what the host uses to identify and load the plugin.
+1. **Generate `.claude-plugin/plugin.json`.** Created inside the install directory, mapping manifest fields to plugin manifest fields:
+
+   | Manifest Field | plugin.json Field |
+   |---|---|
+   | `name` | `name` |
+   | `version` | `version` |
+   | `description` | `description` |
+   | `author` | `author` |
+
+   Package authors SHOULD NOT include `.claude-plugin/` in their archives. If a `.claude-plugin/plugin.json` is present in the archive, the installer MUST use the generated version (from manifest metadata) and MAY warn the author.
 
 2. **Add to `enabledPlugins`.** The installer adds `{name}@ccpkg: true` to the `enabledPlugins` object in `settings.json`. This ensures the host recognizes the plugin as enabled.
 
@@ -1180,20 +1169,15 @@ These two steps — a plugin.json file in the discovery directory and an enabled
 
 ### Namespacing
 
-Namespacing is provided automatically by the host's plugin system. ccpkg does not implement its own namespacing mechanism.
+The host's plugin system provides namespacing automatically. The manifest `name` maps to the plugin.json `name`, which becomes the namespace prefix. All components are exposed as `{package-name}:{component-name}`, with component names derived from directory names (skills, agents) or file names (commands). No file editing or frontmatter rewriting is required.
 
-- The ccpkg manifest `name` field maps to the `.claude-plugin/plugin.json` `name` field, which becomes the namespace prefix.
-- All components within the plugin are namespaced as `{package-name}:{component-name}`.
-- Component names within the namespace are derived from directory names (for skills and agents) or file names (for commands).
-- No file editing or frontmatter rewriting is required — the host applies the namespace prefix automatically based on the plugin.json `name`.
+For example, a package named `api-testing` containing `skills/run-suite/` exposes the skill as `/api-testing:run-suite`.
 
-For example, a package named `api-testing` containing a skill directory `skills/run-suite/` exposes the skill as `/api-testing:run-suite`.
-
-> **Note:** User-level skills (`~/.claude/skills/`) and user-level commands (`~/.claude/commands/`) cannot be namespaced — subdirectories are flattened by the host. This is why ccpkg installs packages as plugins rather than placing files in user-level directories.
+> **Note:** User-level skills (`~/.claude/skills/`) and commands (`~/.claude/commands/`) cannot be namespaced because the host flattens subdirectories. This is why ccpkg installs packages as plugins.
 
 ### Scope and Settings
 
-ccpkg supports multiple installation scopes, each mapping to a different host settings location:
+Each installation scope maps to a different host settings location:
 
 | Scope | Settings Location | Plugin Directory | Behavior |
 |---|---|---|---|
@@ -1369,6 +1353,7 @@ Installers MUST maintain a local cache of installed `.ccpkg` archives to support
 
 ---
 
+
 ## Remote Component References
 
 Components declared in a manifest MAY reference remote sources instead of local archive paths. This enables lightweight distribution of individual components without requiring a full `.ccpkg` archive.
@@ -1405,9 +1390,9 @@ In the structured component form (see [Components Object](#components-object)), 
 
 ### Security Requirements
 
-- Remote component URLs MUST use HTTPS.
-- The `checksum` field is REQUIRED for all remote references. Installers MUST verify the checksum after fetching and MUST reject content that does not match.
-- Authors who publish remote skills at mutable URLs MUST update the checksum in their manifest when the remote content changes.
+- URLs MUST use HTTPS (see [Transport Security](#transport-security)).
+- The `checksum` field is REQUIRED. Installers MUST verify it after fetching and MUST reject mismatches.
+- Authors publishing at mutable URLs MUST update the checksum when remote content changes.
 
 ### Caching
 
@@ -1419,7 +1404,7 @@ Remote components are recorded in the lockfile with their resolved URL, checksum
 
 ### Direct URL Installation
 
-A conforming installer MAY support installing a single component directly from a URL without a manifest. This is a convenience shortcut for single-component distribution. The behavior and syntax of direct URL installation is an implementation concern and is not specified here.
+An installer MAY support installing a single component directly from a URL without a manifest. The behavior and syntax are implementation concerns not specified here.
 
 ---
 
@@ -1625,7 +1610,7 @@ Checksums provide integrity verification — they detect accidental corruption a
 
 ### Hook Safety
 
-- Hook scripts execute with the user's operating system permissions. Hooks have full access to the user's filesystem and processes. Users MUST review hook scripts from untrusted sources before installation.
+- Hook scripts execute with the user's OS permissions and have full filesystem access. Users MUST review hook scripts from untrusted sources before installation.
 - Installers SHOULD display hook scripts for user review during installation.
 - Hosts SHOULD apply timeouts to hook execution to prevent runaway processes.
 
@@ -1676,27 +1661,27 @@ Package authors SHOULD use per-component host scoping (see [Components Object](#
 
 ### Tool-Specific Adapters
 
-The following mechanisms handle tool-specific differences:
+Four mechanisms handle tool-specific differences:
 
-1. **Instruction file assembly.** The `components.instructions` field supports base + per-host overlay assembly. Overlays declare positioning (`append`, `prepend`, `insert` at marker) via YAML frontmatter. The `targets.*.instructions_file` field maps assembled output to host-specific filenames (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`).
+1. **Instruction file assembly.** Base + per-host overlay assembly via `components.instructions`, with output written to the host-specific filename from `targets.*.instructions_file`. See [Instructions](#instructions).
 
-2. **Targets object.** The `targets` field in `manifest.json` allows authors to declare tool-specific overrides. Each tool adapter defines its own schema for the target value object.
+2. **Targets object.** Per-host overrides in `manifest.json`. See [Targets Object](#targets-object).
 
-3. **Hooks.** Hook event types and execution semantics are host-specific. Hosts MUST silently ignore unrecognized event types, enabling packages to include hooks for multiple hosts without conflict.
+3. **Hooks.** Hosts MUST silently ignore unrecognized event types, enabling packages to include hooks for multiple hosts without conflict.
 
-4. **Per-component host scoping.** The `hosts` field in structured component declarations limits a component to specific hosts. Installers silently skip components not targeted at the active host.
+4. **Per-component host scoping.** The `hosts` field in structured component declarations limits a component to specific hosts. Installers silently skip non-matching components.
 
 ### Portability Guidelines for Authors
 
-- Use `instructions.base` with per-host overlays for instructions. Do not hardcode tool-specific filenames.
+- Use `instructions.base` with per-host overlays. Do not hardcode tool-specific filenames.
 - Prefer MCP for tool integration over host-specific mechanisms.
-- Use the `compatibility` field to declare minimum host versions rather than excluding hosts.
+- Use `compatibility` to declare minimum host versions rather than excluding hosts.
+- Use per-component `hosts` scoping for host-specific hooks or agents alongside universal skills.
+- Use canonical event names for hook portability (4 of 5 hosts support native hooks; Codex CLI has minimal support).
+- Scope agents to specific hosts via `hosts` -- agent formats are not yet portable across hosts.
+- Scope LSP components to supported hosts (native in Claude Code; experimental in Gemini CLI and OpenCode).
+- When targeting Copilot, use `targets.copilot.mcp_env_prefix` to declare the `COPILOT_MCP_` credential prefix.
 - Test packages across multiple hosts when possible.
-- Use per-component `hosts` scoping to include host-specific hooks or agents alongside universal skills.
-- When targeting Copilot, note that MCP server credentials are injected via `COPILOT_MCP_` environment variables. Use `targets.copilot.mcp_env_prefix` to declare this.
-- Hooks are the most portable after Skills and MCP — four of five hosts (Claude Code, Copilot, Gemini CLI, OpenCode) have native hook systems. Codex CLI has minimal support (two events only). Use canonical event names for maximum portability.
-- Agents are not yet portable across hosts. Each host uses a different agent definition format and execution model. Scope agents to specific hosts via the `hosts` field.
-- LSP servers are only natively supported by Claude Code. Gemini CLI and OpenCode have experimental support. Scope LSP components to supported hosts.
 
 ---
 

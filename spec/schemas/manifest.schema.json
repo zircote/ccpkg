@@ -13,6 +13,58 @@
     "components"
   ],
   "additionalProperties": false,
+  "$defs": {
+    "localComponent": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the component relative to the package root."
+        },
+        "hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Host identifiers on which this component should be installed. Omit for all hosts."
+        }
+      }
+    },
+    "remoteComponent": {
+      "type": "object",
+      "required": ["url", "checksum"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "HTTPS URL for a remote component reference."
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "SHA-256 checksum for remote content verification."
+        },
+        "cache_ttl": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cache duration in seconds for remote content. Default: 86400."
+        },
+        "hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Host identifiers on which this component should be installed. Omit for all hosts."
+        }
+      }
+    },
+    "componentItem": {
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/localComponent" },
+        { "$ref": "#/$defs/remoteComponent" }
+      ]
+    }
+  },
   "properties": {
     "spec_version": {
       "type": "string",
@@ -86,122 +138,17 @@
       "properties": {
         "skills": {
           "type": "array",
-          "items": {
-            "oneOf": [
-              { "type": "string" },
-              {
-                "type": "object",
-                "required": ["path"],
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "description": "Path to the skill directory."
-                  },
-                  "hosts": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
-                  },
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
-                  },
-                  "checksum": {
-                    "type": "string",
-                    "pattern": "^sha256:[a-f0-9]{64}$",
-                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
-                  },
-                  "cache_ttl": {
-                    "type": "number",
-                    "minimum": 0,
-                    "description": "Cache duration in seconds for remote content. Default: 86400."
-                  }
-                }
-              }
-            ]
-          },
+          "items": { "$ref": "#/$defs/componentItem" },
           "description": "Paths to skill directories relative to the package root. Each directory MUST contain a SKILL.md file."
         },
         "agents": {
           "type": "array",
-          "items": {
-            "oneOf": [
-              { "type": "string" },
-              {
-                "type": "object",
-                "required": ["path"],
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "description": "Path to the agent directory."
-                  },
-                  "hosts": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
-                  },
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
-                  },
-                  "checksum": {
-                    "type": "string",
-                    "pattern": "^sha256:[a-f0-9]{64}$",
-                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
-                  },
-                  "cache_ttl": {
-                    "type": "number",
-                    "minimum": 0,
-                    "description": "Cache duration in seconds for remote content. Default: 86400."
-                  }
-                }
-              }
-            ]
-          },
+          "items": { "$ref": "#/$defs/componentItem" },
           "description": "Paths to agent directories relative to the package root. Each directory MUST contain an AGENT.md file."
         },
         "commands": {
           "type": "array",
-          "items": {
-            "oneOf": [
-              { "type": "string" },
-              {
-                "type": "object",
-                "required": ["path"],
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "description": "Path to the command file."
-                  },
-                  "hosts": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Host identifiers on which this component should be installed. Omit for all hosts."
-                  },
-                  "url": {
-                    "type": "string",
-                    "format": "uri",
-                    "description": "HTTPS URL for a remote component reference. Mutually exclusive with path."
-                  },
-                  "checksum": {
-                    "type": "string",
-                    "pattern": "^sha256:[a-f0-9]{64}$",
-                    "description": "SHA-256 checksum for remote content verification. Required when url is present."
-                  },
-                  "cache_ttl": {
-                    "type": "number",
-                    "minimum": 0,
-                    "description": "Cache duration in seconds for remote content. Default: 86400."
-                  }
-                }
-              }
-            ]
-          },
+          "items": { "$ref": "#/$defs/componentItem" },
           "description": "Paths to command files relative to the package root."
         },
         "hooks": {
