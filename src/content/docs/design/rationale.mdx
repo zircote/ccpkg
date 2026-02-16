@@ -249,6 +249,18 @@ Registries solve discovery. But a mandatory central registry creates a single po
 
 **Discovery via search**: `/ccpkg:search` queries configured registries, merges results, and presents them with trust signals. This is the experience gap between "browse GitHub repos" and "find the right package."
 
+### 9. MCP server deduplication at install time
+
+When multiple packages bundle the same MCP server, the installer deduplicates at install time rather than requiring packages to declare shared dependencies or a shared MCP directory.
+
+**Why install-time dedup?** Packages stay self-contained. Authors do not need to change anything. The dedup is transparent -- the installer is smarter about what it writes to the host config. This preserves Principle #1 (self-contained) and Principle #8 (no inter-package deps).
+
+**Why not shared directory with refcounting?** Reference counting introduces a new complexity vector. Crashes mid-uninstall corrupt counts. It breaks the "each plugin is self-contained in its directory" model hosts expect.
+
+**Why not a server_id manifest field?** Requires schema change and author adoption. Existing packages would not benefit. The key_name + origin tuple provides sufficient identity without opt-in.
+
+**Identity model:** (key_name, origin) tuple. Origin is derived from server mode: command string for Mode 1, bundle path for Mode 2, source URL for Mode 3. Version resolution: highest wins. User override: per-server or global.
+
 ---
 
 ## Relationship to Existing Specifications

@@ -24,7 +24,7 @@ sequenceDiagram
     User->>Installer: Provide config values
     Installer->>Installer: Resolve install scope
     Installer->>Installer: Extract archive to install location
-    Installer->>Installer: Render templates (variable substitution)
+    Installer->>Installer: Render templates + dedup MCP
     Installer->>Installer: Store config values in host settings
     Installer->>Installer: Update lockfile
     Installer->>Host: Register components
@@ -58,7 +58,27 @@ sequenceDiagram
 
    If a previous version exists at the install location, the installer MUST remove it before extraction.
 
-10. **Render templates.** The installer processes `.mcp.json` and `.lsp.json` templates, replacing `${config.VARIABLE_NAME}` markers with resolved values. Rendered files are written to the install location.
+10. **Render templates and deduplicate MCP servers.** The installer processes `.mcp.json` and `.lsp.json` templates, replacing `${config.VARIABLE_NAME}` markers with resolved values. For MCP servers, the installer SHOULD check for duplicates before writing:
+
+    a. For each server entry, compute its identity tuple (key_name, origin) as defined in Server Deduplication (see [Component Types](/specification/component-types/)).
+
+    b. If no matching entry exists in `shared_mcp_servers`: render the template, merge into the host config, and add the server to `shared_mcp_servers` with `declared_by` set to the current package.
+
+    c. If a match exists, compare versions. Treat `null`/unknown versions as lower than any concrete semver version. If both are `null`/unknown, treat them as equal.
+
+       - If the incoming version is higher: re-render using the incoming package's template, update `active_source` and `version`, and append the package to `declared_by`.
+
+       - If the incoming version is equal or lower (including both `null`): skip rendering and append the package to `declared_by` only.
+
+    d. If the key_name matches but the origin differs (conflict):
+
+       - **Interactive mode**: warn the user and offer resolution options: keep the existing server, replace it, or install both under distinct keys.
+
+       - **Non-interactive mode**: fail the install with a non-zero exit status and a descriptive error. Implementations MAY allow a preconfigured conflict policy (e.g., via CLI flags) to resolve without prompting.
+
+    e. If the user has disabled dedup for this server (`dedup: false`), skip dedup checks and install the server under a package-scoped key (e.g., `{key_name}#{package_name}`). The installer MUST record the concrete key in the lockfile so uninstall can identify the correct entry.
+
+    Rendered `.lsp.json` files are written to the install location without deduplication (LSP server dedup is deferred to a future spec version).
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
@@ -71,9 +91,17 @@ sequenceDiagram
 Uninstalling a package reverses the install process:
 
 1. Remove the package directory from the install location.
-2. Remove the package entry from the lockfile.
-3. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
-4. Deregister components from the host.
+2. Remove or reassign MCP servers. For each MCP server the package declared:
+
+   a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
+
+   b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-materialize its MCP template, re-render with that package's config values, and update `active_source`. For archive-backed packages, re-extract from the archive cache. For linked packages (`source: link:...`), read the template directly from the linked directory. If this package was not the active source, no config change is needed.
+
+   c. If the server has `dedup: false`: remove only this package's copy. Other packages' copies are independent and unaffected.
+
+3. Remove the package entry from the lockfile.
+4. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
+5. Deregister components from the host.
 
 ## Update
 
