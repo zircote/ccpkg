@@ -143,14 +143,14 @@ ccpkg itself is a Claude Code plugin. It uses all four extension types available
 
 Packages install to one of two locations:
 
-- **User scope**: `~/.claude/packages/` -- available in all projects for this user.
-- **Project scope**: `<project>/.claude/packages/` -- available only in this project, committable to version control.
+- **User scope**: `~/.ccpkg/plugins/` -- available in all projects for this user.
+- **Project scope**: `{project-root}/.ccpkg/plugins/` -- available only in this project, committable to version control.
 
 **Resolution order**: Explicit flag (`--user` or `--project`) wins. If no flag, the manifest's `scope` hint is used. If no hint, default is user scope.
 
 **Why user-wins?** The user is the one who has to live with where the package lands. Author hints are suggestions, not mandates. A team-shared linting plugin might suggest project scope, but an individual user might prefer it globally.
 
-**Per-scope lockfiles**: Each scope has its own lockfile. The project lockfile (`<project>/.claude/ccpkg-lock.json`) is committable and shareable -- team members get identical package versions. The user lockfile (`~/.claude/ccpkg-lock.json`) is personal.
+**Per-scope lockfiles**: Each scope has its own lockfile. The project lockfile (`{project-root}/.ccpkg/ccpkg-lock.json`) is committable and shareable -- team members get identical package versions. The user lockfile (`~/.ccpkg/ccpkg-lock.json`) is personal.
 
 ### 4. Configuration model
 
