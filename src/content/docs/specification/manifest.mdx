@@ -24,7 +24,7 @@ The `manifest.json` file is a JSON object that declares the package identity, co
 | `config` | OPTIONAL | `object` | See [Config Object](#config-object). | Declares configuration slots for user-supplied values. |
 | `compatibility` | OPTIONAL | `object` | See [Compatibility Object](#compatibility-object). | Declares host compatibility constraints. |
 | `targets` | OPTIONAL | `object` | See [Targets Object](#targets-object). | Tool-specific adapter mappings. |
-| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | Integrity hash of the archive (excluding the checksum field itself). |
+| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | SHA-256 hash computed over the raw archive bytes (the `.ccpkg` ZIP file), excluding the checksum field itself from the manifest before hashing. |
 
 ## Author Object
 
@@ -46,7 +46,45 @@ The `components` object declares which component types are included in the archi
 | `hooks` | `string` | Path to a `hooks.json` file within the archive. |
 | `mcp` | `string` | Path to an `.mcp.json` template file within the archive. |
 | `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
-| `instructions` | `string` | Path to the canonical `INSTRUCTIONS.md` file within the archive. |
+| `instructions` | `string` or `object` | Instructions declaration. A string is a path to a single instructions file. An object declares a base file and optional per-host overlays for assembly. |
+
+Each component field that accepts an array (`skills`, `agents`, `commands`) supports two declaration forms:
+
+1. **Simple form** (string): A path to the component. The component is available on all hosts.
+2. **Structured form** (object): An object with `path` and optional metadata fields. Use this to scope components to specific hosts.
+
+**Structured form fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `path` | REQUIRED | `string` | Path to the component (same as the simple form string value) |
+| `hosts` | OPTIONAL | `string[]` | List of host identifiers on which this component should be installed. If omitted, the component is installed on all hosts. |
+
+**Example with per-component host scoping:**
+
+```json
+{
+  "components": {
+    "skills": [
+      "skills/universal-skill",
+      {
+        "path": "skills/claude-specific-skill",
+        "hosts": ["claude"]
+      }
+    ],
+    "hooks": "hooks/hooks.json",
+    "agents": [
+      "agents/universal-agent",
+      {
+        "path": "agents/copilot-agent",
+        "hosts": ["copilot"]
+      }
+    ]
+  }
+}
+```
+
+When an installer encounters a component scoped to hosts that do not include the active host, it MUST skip that component silently. The installer MUST NOT treat this as an error.
 
 ## Config Object
 
@@ -94,26 +132,72 @@ Installers SHOULD warn the user if the host does not satisfy the declared compat
 
 The `targets` object provides tool-specific overrides and adapter mappings. Each key is a tool identifier. The value is an object with tool-specific configuration.
 
+The following standard fields are defined. Tool-specific adapters MAY define additional fields.
+
+| Field | Type | Description |
+|---|---|---|
+| `instructions_file` | `string` | OPTIONAL. Filename to which assembled instructions are written for this host. |
+| `hook_events` | `object` | OPTIONAL. Maps canonical event names (lowercase-hyphenated keys) to host-native event name strings. |
+| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection (e.g., Copilot uses `COPILOT_MCP_`). |
+
 ```json
 {
   "targets": {
     "claude": {
-      "instructions_file": "CLAUDE.md"
+      "instructions_file": "CLAUDE.md",
+      "hook_events": {
+        "pre-tool-use": "PreToolUse",
+        "post-tool-use": "PostToolUse",
+        "session-start": "SessionStart",
+        "session-end": "SessionStop",
+        "notification": "Notification",
+        "pre-compact": "PreCompact",
+        "user-prompt-submit": "UserPromptSubmit"
+      }
     },
     "codex": {
-      "instructions_file": "AGENTS.md"
+      "instructions_file": "AGENTS.md",
+      "hook_events": {
+        "post-tool-use": "AfterToolUse",
+        "notification": "notify"
+      }
     },
     "copilot": {
-      "instructions_file": ".github/copilot-instructions.md"
+      "instructions_file": ".github/copilot-instructions.md",
+      "mcp_env_prefix": "COPILOT_MCP_",
+      "hook_events": {
+        "pre-tool-use": "preToolUse",
+        "post-tool-use": "postToolUse",
+        "session-start": "sessionStart",
+        "session-end": "sessionEnd",
+        "user-prompt-submit": "userPromptSubmitted",
+        "error": "errorOccurred"
+      }
     },
     "gemini": {
-      "instructions_file": "GEMINI.md"
+      "instructions_file": "GEMINI.md",
+      "hook_events": {
+        "pre-tool-use": "BeforeTool",
+        "post-tool-use": "AfterTool",
+        "session-start": "SessionStart",
+        "session-end": "SessionEnd",
+        "notification": "Notification",
+        "pre-compact": "PreCompress"
+      }
+    },
+    "opencode": {
+      "instructions_file": "AGENTS.md",
+      "hook_events": {
+        "pre-tool-use": "tool.execute.before",
+        "post-tool-use": "tool.execute.after",
+        "pre-compact": "experimental.session.compacting"
+      }
     }
   }
 }
 ```
 
-The contents of `targets` are not strictly defined by this specification. Tool-specific adapters define their own schemas. The `instructions_file` key is the primary standard adapter field, specifying the filename to which the canonical `INSTRUCTIONS.md` is copied for that tool.
+Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode uses TypeScript plugin hooks rather than shell-based hooks, so only the closest equivalents are mapped. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host.
 
 ## Example Manifest
 
@@ -140,7 +224,13 @@ The contents of `targets` are not strictly defined by this specification. Tool-s
     ],
     "hooks": "hooks/hooks.json",
     "mcp": "mcp/.mcp.json",
-    "instructions": "instructions/INSTRUCTIONS.md"
+    "instructions": {
+      "base": "instructions/base.md",
+      "hosts": {
+        "claude": "instructions/hosts/claude.md",
+        "copilot": "instructions/hosts/copilot.md"
+      }
+    }
   },
   "config": {
     "API_BASE_URL": {

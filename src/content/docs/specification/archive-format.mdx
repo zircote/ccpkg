@@ -50,8 +50,11 @@ example-plugin-1.2.0.ccpkg (ZIP)
 ├── lsp/
 │   └── .lsp.json                   # LSP server config template
 ├── instructions/
-│   ├── INSTRUCTIONS.md             # Canonical instruction file
-│   └── mappings.json               # Tool-specific filename mappings
+│   ├── base.md                     # Base instructions (shared across all hosts)
+│   └── hosts/                      # Per-host overlay files
+│       ├── claude.md               # Claude-specific overlay
+│       ├── copilot.md              # Copilot-specific overlay
+│       └── gemini.md               # Gemini-specific overlay
 ├── config.schema.json              # OPTIONAL — JSON Schema for config
 ├── icon.png                        # OPTIONAL — package icon (PNG, max 512x512)
 └── LICENSE                         # OPTIONAL — license file
