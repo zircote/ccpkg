@@ -17,7 +17,7 @@ description: "Install-time safety, transport security, checksum verification, se
 
 ## Checksum Verification
 
-Checksums provide integrity verification — they detect accidental corruption and transmission errors, not deliberate tampering. Cryptographic package signing is deferred to a future specification version (see [Supply Chain](#supply-chain)).
+Checksums provide integrity verification — they detect accidental corruption and transmission errors, not deliberate tampering. Cryptographic package signing is deferred to a future specification version (see [Supply Chain](/specification/security#supply-chain)).
 
 - Installers SHOULD compute and verify SHA-256 checksums for all downloaded archives.
 - If a manifest `checksum` field is present, the installer MUST verify it. A mismatch MUST abort installation.
@@ -32,7 +32,7 @@ Checksums provide integrity verification — they detect accidental corruption a
 
 ## Hook Safety
 
-- Hook scripts execute with the user's operating system permissions. Hooks have full access to the user's filesystem and processes. Users MUST review hook scripts from untrusted sources before installation.
+- Hook scripts execute with the user's OS permissions and have full filesystem access. Users MUST review hook scripts from untrusted sources before installation.
 - Installers SHOULD display hook scripts for user review during installation.
 - Hosts SHOULD apply timeouts to hook execution to prevent runaway processes.
 

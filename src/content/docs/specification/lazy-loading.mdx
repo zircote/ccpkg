@@ -3,17 +3,13 @@ title: "Lazy Loading"
 description: "Aspirational lazy loading behavior for on-demand component activation."
 ---
 
-# Lazy Loading (Aspirational)
+## D.4 Lazy Loading
 
-Lazy loading is a **future host integration target** (Appendix D.4), not a current normative requirement. It is documented here to guide host development and package authoring best practices. See [Appendix D](/specification/appendices/) for other aspirational features (D.1 Hot-Reload After Install, D.2 Host-Aware Lockfile Loading, D.3 Runtime Component State Machine).
+**Description:** Only package metadata is loaded at session startup. Full component content (SKILL.md bodies, AGENT.md bodies, command files) is deferred until the component is actually invoked. This minimizes startup time and context token consumption.
 
-ccpkg implementations MUST NOT depend on lazy loading and MUST NOT claim to provide it. Packages should be structured to benefit from whatever lazy loading the host provides natively.
+**Requires:** A host-level mechanism to index component metadata (name, description, type) separately from component content, and to load full content on demand at invocation time.
 
-## Ideal Behavior
-
-Only package metadata is loaded at session startup. Full component content (SKILL.md bodies, AGENT.md bodies, command files) is deferred until the component is actually invoked. This minimizes startup time and context token consumption.
-
-## On-Demand Loading
+**Ideal behavior:** At session start, the host reads only frontmatter or manifest-level metadata for each installed component. When a skill is activated, the full SKILL.md body is loaded. When a command is invoked, the full command file is read. MCP and LSP servers start their processes only on first relevant invocation.
 
 | Component | Trigger | What Is Loaded |
 |---|---|---|
@@ -24,10 +20,4 @@ Only package metadata is loaded at session startup. Full component content (SKIL
 | MCP server | First tool invocation targeting the server | Server process started |
 | LSP server | First file matching the language scope | Server process started |
 
-## Current Behavior
-
-Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading.
-
-## What This Requires
-
-A host-level mechanism to index component metadata (name, description, type) separately from component content, and to load full content on demand at invocation time. No host currently provides this as a general-purpose API.
+**Current behavior:** Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it.

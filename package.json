@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "generate:spec": "node scripts/generate-spec-pages.mjs",
+    "check:spec": "node scripts/check-spec-freshness.mjs"
   },
   "dependencies": {
     "astro": "^5.17.2",

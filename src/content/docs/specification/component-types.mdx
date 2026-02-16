@@ -21,7 +21,7 @@ Skills conform to the [Agent Skills specification](https://agentskills.io/specif
 Skills support three-tier progressive disclosure to minimize context token usage:
 
 1. **Metadata** (~100 tokens): The `name` and `description` from frontmatter, loaded at session startup for all installed skills.
-2. **Instructions** (&lt;5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
+2. **Instructions** (<5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
 3. **Resources** (as needed): Files in `scripts/`, `references/`, and `assets/`, loaded only when required during execution.
 
 **Example SKILL.md:**
@@ -42,7 +42,10 @@ Validate OpenAPI specification files for correctness and compliance.
 ## Usage
 
 1. Read the target OpenAPI spec file (YAML or JSON).
-2. Run the validation script: `scripts/validate.py <spec-file>`
+2. Run the validation script:
+   ```
+   scripts/validate.py <spec-file>
+   ```
 3. Report findings grouped by severity (error, warning, info).
 
 ## Edge Cases
@@ -333,7 +336,7 @@ The server is referenced by an external URL with checksum verification. The arch
 
 The `source` URL MUST use HTTPS (see [Transport Security](/specification/security#transport-security)).
 
-### Variable Substitution
+**Variable Substitution:**
 
 Template variables use the syntax `${config.VARIABLE_NAME}`. The variable name MUST correspond to a key in the manifest's `config` object.
 
@@ -499,42 +502,3 @@ General tool guidelines here...
 - If `components.instructions` is declared (in either form), the referenced base file MUST exist in the archive.
 - All overlay files declared in `hosts` MUST exist in the archive.
 - Marker names MUST match the pattern `[a-z0-9]+(-[a-z0-9]+)*` (lowercase alphanumeric with hyphens).
-
----
-
-## Configuration Resolution
-
-Configuration resolution is the process by which user-supplied values are matched to the config slots declared in the manifest.
-
-### Config Value Resolution Order
-
-When resolving a config variable, the installer MUST use the following precedence order (highest to lowest):
-
-1. **User-supplied value** — provided interactively during install or pre-configured in host settings.
-2. **Config default** — the `default` value declared in the manifest config slot.
-3. **Error** — if the slot is `required` and no value is found, the installer MUST report an error.
-
-If a slot is not `required` and no value is available from steps 1 or 2, the variable is treated as unset.
-
-### Storage
-
-Config values are stored in the host's settings mechanism, namespaced under the package name:
-
-```json
-{
-  "packages": {
-    "api-testing": {
-      "API_BASE_URL": "https://api.example.com",
-      "API_KEY": "sk-...",
-      "ENVIRONMENT": "staging"
-    }
-  }
-}
-```
-
-- Values of type `secret` MUST be masked in all log output and MUST NOT appear in lockfiles.
-- Installers SHOULD store secrets using the host's secure storage mechanism when available.
-
-### Variable Substitution
-
-Template variables in `.mcp.json` and `.lsp.json` files use the syntax `${config.VARIABLE_NAME}`. The substitution rules defined in [MCP Servers > Variable Substitution](#variable-substitution) apply. Substitution occurs at install time when templates are rendered to their final form.

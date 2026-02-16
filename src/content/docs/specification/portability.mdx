@@ -20,7 +20,7 @@ The following components are tool-agnostic and work across any host that support
 
 ## Component Portability Matrix
 
-The following matrix indicates the portability status of each component type across known hosts. This is informational -- hosts not listed here may support any subset of components.
+The following matrix indicates the portability status of each component type across known hosts. This is informational — hosts not listed here may support any subset of components.
 
 | Component | Claude Code | Copilot | Codex CLI | Gemini CLI | OpenCode |
 |---|---|---|---|---|---|
@@ -44,7 +44,7 @@ Package authors SHOULD use per-component host scoping (see [Components Object](/
 
 Four mechanisms handle tool-specific differences:
 
-1. **Instruction file assembly.** Base + per-host overlay assembly via `components.instructions`, with output written to the host-specific filename from `targets.*.instructions_file`. See [Instructions](/specification/components#instructions).
+1. **Instruction file assembly.** Base + per-host overlay assembly via `components.instructions`, with output written to the host-specific filename from `targets.*.instructions_file`. See [Instructions](/specification/component-types#instructions).
 
 2. **Targets object.** Per-host overrides in `manifest.json`. See [Targets Object](/specification/manifest#targets-object).
 

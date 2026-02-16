@@ -15,16 +15,16 @@ The `manifest.json` file is a JSON object that declares the package identity, co
 | `name` | REQUIRED | `string` | 1–64 characters. Lowercase alphanumeric and hyphens. MUST NOT start or end with a hyphen. MUST NOT contain consecutive hyphens. | The package identifier. Used as a namespace prefix for commands and config. |
 | `version` | REQUIRED | `string` | Valid [semver](https://semver.org/) string. | The package version. |
 | `description` | REQUIRED | `string` | 1–1024 characters. | A human-readable description of the package. |
-| `author` | REQUIRED | `object` | See [Author Object](#author-object). | The package author. |
+| `author` | REQUIRED | `object` | See [Author Object](/specification/manifest#author-object). | The package author. |
 | `license` | OPTIONAL | `string` | SPDX license identifier or `"SEE LICENSE IN <filename>"`. | The package license. |
 | `repository` | OPTIONAL | `string` | Valid URL. | URL to the source repository. |
 | `homepage` | OPTIONAL | `string` | Valid URL. | URL to the package homepage. |
 | `scope` | OPTIONAL | `string` | One of `"user"`, `"project"`, `"any"`. Default: `"any"`. | The author's recommended install scope. |
-| `components` | REQUIRED | `object` | See [Components Object](#components-object). | Declares the package contents. |
-| `config` | OPTIONAL | `object` | See [Config Object](#config-object). | Declares configuration slots for user-supplied values. |
-| `compatibility` | OPTIONAL | `object` | See [Compatibility Object](#compatibility-object). | Declares host compatibility constraints. |
-| `targets` | OPTIONAL | `object` | See [Targets Object](#targets-object). | Tool-specific adapter mappings. |
-| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | SHA-256 hash computed over the raw archive bytes (the `.ccpkg` ZIP file), excluding the checksum field itself from the manifest before hashing. |
+| `components` | REQUIRED | `object` | See [Components Object](/specification/manifest#components-object). | Declares the package contents. |
+| `config` | OPTIONAL | `object` | See [Config Object](/specification/manifest#config-object). | Declares configuration slots for user-supplied values. |
+| `compatibility` | OPTIONAL | `object` | See [Compatibility Object](/specification/manifest#compatibility-object). | Declares host compatibility constraints. |
+| `targets` | OPTIONAL | `object` | See [Targets Object](/specification/manifest#targets-object). | Tool-specific adapter mappings. |
+| `checksum` | OPTIONAL | `string` | Format: `"sha256:<hex>"`. 64 hex characters after prefix. | SHA-256 hash computed over the raw archive bytes (the `.ccpkg` ZIP file), excluding the checksum field itself from the manifest before hashing. See [Checksum Verification](/specification/security#checksum-verification). |
 
 ## Author Object
 
@@ -46,7 +46,7 @@ The `components` object declares which component types are included in the archi
 | `hooks` | `string` | Path to a `hooks.json` file within the archive. |
 | `mcp` | `string` | Path to an `.mcp.json` template file within the archive. |
 | `lsp` | `string` | Path to an `.lsp.json` template file within the archive. |
-| `instructions` | `string` or `object` | Instructions declaration. A string is a path to a single instructions file. An object declares a base file and optional per-host overlays for assembly. |
+| `instructions` | `string` or `object` | Instructions declaration. A string is a path to a single instructions file. An object declares a base file and optional per-host overlays for assembly. See [Instructions](/specification/component-types#instructions). |
 
 Each component field that accepts an array (`skills`, `agents`, `commands`) supports two declaration forms:
 
