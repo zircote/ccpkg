@@ -30,6 +30,9 @@ Skills support three-tier progressive disclosure to minimize context token usage
 ---
 name: openapi-validator
 description: Validates OpenAPI specifications against the OpenAPI 3.x standard. Use when the user wants to check an API spec for errors, warnings, or compliance issues.
+metadata:
+  author: example-org
+  version: "1.0"
 ---
 
 # OpenAPI Validator
@@ -74,6 +77,9 @@ The Markdown body of `AGENT.md` defines the agent's system instructions, persona
 ---
 name: security-reviewer
 description: A security-focused code review agent that identifies vulnerabilities, insecure patterns, and OWASP Top 10 issues in source code.
+metadata:
+  author: example-org
+  version: "1.0"
 ---
 
 # Security Reviewer
@@ -177,6 +183,39 @@ The hooks file is a JSON object where each key is an event type and the value is
 
 Hosts MAY define additional event types. Hooks for unrecognized event types MUST be silently ignored.
 
+### Canonical Event Vocabulary
+
+The event types above use Claude Code's naming convention. ccpkg also defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](/specification/manifest#targets-object)).
+
+**Canonical event names and host mappings:**
+
+| Canonical Event | Claude Code | Gemini CLI | OpenCode | Codex CLI | Copilot | Description |
+|---|---|---|---|---|---|---|
+| `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
+| `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
+| `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
+| `session-end` | `SessionStop` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
+| `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
+| `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
+| `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
+| `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
+
+A `—` means the host has no equivalent event. The canonical vocabulary covers events supported by 3+ hosts.
+
+**Host-specific events NOT in canonical vocabulary:**
+
+- **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
+- **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
+- **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
+- **Codex CLI**: (none beyond the two listed)
+- **Copilot**: (none beyond the six listed)
+
+**Usage rules:**
+
+- Authors MAY use either canonical or host-specific names in `hooks.json`.
+- The installer MUST translate canonical names to the active host's convention via `targets.*.hook_events`.
+- Host-specific names work only on that host and are silently ignored by others.
+
 **Hook Definition:**
 
 | Field | Required | Type | Description |
@@ -197,6 +236,25 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
     }
   ],
   "SessionStart": [
+    {
+      "command": "scripts/check-env.sh"
+    }
+  ]
+}
+```
+
+**Example hooks.json using canonical event names:**
+
+```json
+{
+  "post-tool-use": [
+    {
+      "matcher": "Bash",
+      "command": "scripts/lint-output.sh",
+      "timeout": 5000
+    }
+  ],
+  "session-start": [
     {
       "command": "scripts/check-env.sh"
     }
@@ -338,27 +396,145 @@ LSP (Language Server Protocol) server configurations enable packages to provide 
 
 ## Instructions
 
-Instructions are canonical documentation files that provide guidance to the AI coding assistant. The `instructions/INSTRUCTIONS.md` file contains the universal instruction content. The `instructions/mappings.json` file maps this content to tool-specific filenames.
+Instructions are documentation files that provide guidance to the AI coding assistant. The `components.instructions` field declares the instruction content to be assembled and installed.
 
-**Requirements:**
+### Simple Form
 
-- If `components.instructions` is declared, the referenced file MUST exist in the archive.
-- A `mappings.json` file SHOULD be present alongside the instructions file.
-- Installers MUST copy the canonical instructions file to the appropriate tool-specific filename during installation.
-
-**mappings.json Format:**
+When `components.instructions` is a string, it is a path to a single instructions file. The installer copies it to the filename defined in `targets.*.instructions_file`.
 
 ```json
-{
-  "claude": "CLAUDE.md",
-  "codex": "AGENTS.md",
-  "copilot": ".github/copilot-instructions.md",
-  "gemini": "GEMINI.md"
+"instructions": "instructions/base.md"
+```
+
+### Structured Form (Base + Overlay Assembly)
+
+When `components.instructions` is an object, it declares a base file and optional per-host overlays. The installer assembles the output by combining base content with the active host's overlay.
+
+```json
+"instructions": {
+  "base": "instructions/base.md",
+  "hosts": {
+    "claude": "instructions/hosts/claude.md",
+    "copilot": "instructions/hosts/copilot.md",
+    "gemini": "instructions/hosts/gemini.md"
+  }
 }
 ```
 
-The keys are tool identifiers matching those used in the `targets` manifest field. The values are relative file paths (from the project or user config root) where the instructions should be written.
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `base` | REQUIRED | `string` | Path to the base instructions file within the archive. |
+| `hosts` | OPTIONAL | `object` | Map of host identifiers to overlay file paths within the archive. Keys match identifiers used in the `targets` manifest field. |
 
-If `targets` includes an `instructions_file` override for a tool, that value takes precedence over `mappings.json`. Authors SHOULD use `targets.*.instructions_file` for simple cases. Use `mappings.json` when the package needs to support hosts not listed in targets.
+### Overlay Files
 
-If the active host tool is not present in either `targets` or `mappings.json`, the installer SHOULD copy the file as `INSTRUCTIONS.md` and emit a warning.
+Overlay files are Markdown files with YAML frontmatter that declares how the overlay content is positioned relative to the base content.
+
+**Frontmatter fields:**
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `position` | OPTIONAL | `string` | One of `append`, `prepend`, or `insert`. Default: `append`. |
+| `marker` | Conditional | `string` | Name of the insertion marker in the base file. REQUIRED when `position` is `insert`. |
+
+**Example overlay — append (default):**
+
+```markdown
+---
+position: append
+---
+## Claude-Specific Guidelines
+
+Use Claude Code's native subagent spawning for parallel research tasks.
+```
+
+**Example overlay — prepend:**
+
+```markdown
+---
+position: prepend
+---
+> This package requires Copilot agent mode. Enable it in VS Code settings.
+```
+
+**Example overlay — insert at marker:**
+
+```markdown
+---
+position: insert
+marker: host-tools
+---
+When using Gemini CLI, prefer the built-in extension system for tool management.
+```
+
+Where the base file contains a named marker at the desired insertion point:
+
+```markdown
+## Tool Usage
+
+General tool guidelines here...
+
+<!-- ccpkg:host-tools -->
+
+## Error Handling
+...
+```
+
+### Assembly Rules
+
+| `position` | `marker` | Behavior |
+|---|---|---|
+| `append` | ignored | Overlay content appended after base content |
+| `prepend` | ignored | Overlay content prepended before base content |
+| `insert` | REQUIRED | Replaces `<!-- ccpkg:{marker} -->` in base with overlay content |
+
+- If no overlay exists for the active host, the base content is used as-is.
+- If `position` is `insert` but the marker `<!-- ccpkg:{marker} -->` is not found in the base file, the installer MUST report an error.
+- The overlay's YAML frontmatter MUST be stripped before assembly — only the Markdown body is included in the output.
+- The assembled output is written to the host-specific filename defined in `targets.*.instructions_file`.
+- If the active host is not present in either `hosts` or `targets`, the installer SHOULD write the base content as `INSTRUCTIONS.md` and emit a warning.
+
+### Requirements
+
+- If `components.instructions` is declared (in either form), the referenced base file MUST exist in the archive.
+- All overlay files declared in `hosts` MUST exist in the archive.
+- Marker names MUST match the pattern `[a-z0-9]+(-[a-z0-9]+)*` (lowercase alphanumeric with hyphens).
+
+---
+
+## Configuration Resolution
+
+Configuration resolution is the process by which user-supplied values are matched to the config slots declared in the manifest.
+
+### Config Value Resolution Order
+
+When resolving a config variable, the installer MUST use the following precedence order (highest to lowest):
+
+1. **User-supplied value** — provided interactively during install or pre-configured in host settings.
+2. **Config default** — the `default` value declared in the manifest config slot.
+3. **Error** — if the slot is `required` and no value is found, the installer MUST report an error.
+
+If a slot is not `required` and no value is available from steps 1 or 2, the variable is treated as unset.
+
+### Storage
+
+Config values are stored in the host's settings mechanism, namespaced under the package name:
+
+```json
+{
+  "packages": {
+    "api-testing": {
+      "API_BASE_URL": "https://api.example.com",
+      "API_KEY": "sk-...",
+      "ENVIRONMENT": "staging"
+    }
+  }
+}
+```
+
+- Values of type `secret` MUST be masked in all log output and MUST NOT appear in lockfiles.
+- Installers SHOULD store secrets using the host's secure storage mechanism when available.
+
+### Variable Substitution
+
+Template variables in `.mcp.json` and `.lsp.json` files use the syntax `${config.VARIABLE_NAME}`. The substitution rules defined in [MCP Servers > Variable Substitution](#variable-substitution) apply. Substitution occurs at install time when templates are rendered to their final form.
