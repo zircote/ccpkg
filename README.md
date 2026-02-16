@@ -1,8 +1,19 @@
 # ccpkg
 
+[![Spec Version](https://img.shields.io/badge/spec-2026--02--14-blue?style=flat-square)](https://ccpkg.dev/spec/specification.html)
+[![Status](https://img.shields.io/badge/status-draft-orange?style=flat-square)](#status)
+[![License: CC-BY-4.0](https://img.shields.io/badge/license-CC--BY--4.0-green?style=flat-square)](https://creativecommons.org/licenses/by/4.0/)
+[![Docs](https://img.shields.io/badge/docs-ccpkg.dev-818cf8?style=flat-square)](https://ccpkg.dev)
+[![GitHub Discussions](https://img.shields.io/github/discussions/zircote/ccpkg?style=flat-square&color=94a3b8)](https://github.com/zircote/ccpkg/discussions)
+
 > An open packaging format for AI coding assistant extensions.
 
 ccpkg is a self-contained archive format for packaging and distributing skills, agents, commands, hooks, MCP servers, and LSP servers as a single portable unit. One file, one install, zero post-install steps.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic.svg">
+  <img alt="How ccpkg works: Author, Pack, Distribute, Install" src=".github/readme-infographic.svg" width="800">
+</picture>
 
 ## The Problem
 

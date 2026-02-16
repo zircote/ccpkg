@@ -1,0 +1,121 @@
+{
+  "sourceSpec": "spec/specification.md",
+  "outputDir": "src/content/docs/specification",
+  "pages": [
+    {
+      "output": "overview.mdx",
+      "title": "Overview",
+      "description": "Introduction to the ccpkg specification, design principles, and architecture.",
+      "sections": [
+        "Status",
+        "Introduction",
+        "Design Principles",
+        "Architecture"
+      ],
+      "keepPreamble": true
+    },
+    {
+      "output": "archive-format.mdx",
+      "title": "Archive Format",
+      "description": "File extension, MIME type, archive requirements, and directory structure for .ccpkg files.",
+      "sections": ["Archive Format"]
+    },
+    {
+      "output": "manifest.mdx",
+      "title": "Manifest",
+      "description": "The manifest.json schema — top-level fields, author, components, config, compatibility, and targets objects.",
+      "sections": ["Manifest Schema"]
+    },
+    {
+      "output": "component-types.mdx",
+      "title": "Component Types",
+      "description": "Skills, agents, commands, hooks, MCP servers, LSP servers, and instructions — formats and requirements.",
+      "sections": ["Component Types"]
+    },
+    {
+      "output": "configuration.mdx",
+      "title": "Configuration",
+      "description": "Configuration resolution order, storage, and variable substitution in templates.",
+      "sections": ["Configuration Resolution"]
+    },
+    {
+      "output": "install-lifecycle.mdx",
+      "title": "Install Lifecycle",
+      "description": "The install sequence, uninstall, update, and dev mode (link/unlink) workflows.",
+      "sections": ["Install Lifecycle", "Host Integration"]
+    },
+    {
+      "output": "lockfile.mdx",
+      "title": "Lockfile",
+      "description": "Lockfile format, schema, and usage for deterministic environment reproduction.",
+      "sections": ["Lockfile Format", "Remote Component References"]
+    },
+    {
+      "output": "registry.mdx",
+      "title": "Registry",
+      "description": "Optional decentralized registry protocol for package discovery, search, and version resolution.",
+      "sections": ["Registry Protocol"]
+    },
+    {
+      "output": "security.mdx",
+      "title": "Security",
+      "description": "Install-time safety, transport security, checksum verification, secrets management, hook safety, and supply chain considerations.",
+      "sections": ["Security Considerations"]
+    },
+    {
+      "output": "portability.mdx",
+      "title": "Portability",
+      "description": "Cross-tool portability via universal standards and thin adapter mappings.",
+      "sections": ["Cross-Tool Portability"]
+    },
+    {
+      "output": "versioning.mdx",
+      "title": "Versioning",
+      "description": "Package versioning with semver, specification versioning with dates, and version range semantics.",
+      "sections": ["Versioning"]
+    },
+    {
+      "output": "appendices.mdx",
+      "title": "Appendices",
+      "description": "JSON Schema reference, reserved package names, and glossary of terms.",
+      "sections": [
+        "Appendix A: Complete Manifest JSON Schema Reference",
+        "Appendix B: Reserved Package Names",
+        "Appendix C: Glossary",
+        "Appendix D: Future Host Integration Targets"
+      ],
+      "subsectionFilter": {
+        "section": "Appendix D: Future Host Integration Targets",
+        "exclude": ["D.4"],
+        "crossRef": {
+          "D.4": "For full details on lazy loading behavior, triggers, and current host support, see the dedicated [Lazy Loading](/specification/lazy-loading) page."
+        }
+      }
+    },
+    {
+      "output": "lazy-loading.mdx",
+      "title": "Lazy Loading",
+      "description": "Aspirational lazy loading behavior for on-demand component activation.",
+      "sections": ["Appendix D: Future Host Integration Targets"],
+      "subsectionFilter": {
+        "section": "Appendix D: Future Host Integration Targets",
+        "include": ["D.4"]
+      }
+    }
+  ],
+  "crossReferences": {
+    "#author-object": "/specification/manifest#author-object",
+    "#components-object": "/specification/manifest#components-object",
+    "#config-object": "/specification/manifest#config-object",
+    "#compatibility-object": "/specification/manifest#compatibility-object",
+    "#targets-object": "/specification/manifest#targets-object",
+    "#checksum-verification": "/specification/security#checksum-verification",
+    "#instructions": "/specification/component-types#instructions",
+    "#transport-security": "/specification/security#transport-security",
+    "#variable-substitution": "/specification/component-types#variable-substitution",
+    "#plugin-registration": "/specification/install-lifecycle#plugin-registration",
+    "#lockfile-format": "/specification/lockfile#lockfile-format",
+    "#appendix-d-future-host-integration-targets": "/specification/appendices#appendix-d-future-host-integration-targets",
+    "#supply-chain": "/specification/security#supply-chain"
+  }
+}
