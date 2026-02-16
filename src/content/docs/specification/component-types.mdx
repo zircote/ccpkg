@@ -21,7 +21,7 @@ Skills conform to the [Agent Skills specification](https://agentskills.io/specif
 Skills support three-tier progressive disclosure to minimize context token usage:
 
 1. **Metadata** (~100 tokens): The `name` and `description` from frontmatter, loaded at session startup for all installed skills.
-2. **Instructions** (<5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
+2. **Instructions** (&lt;5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
 3. **Resources** (as needed): Files in `scripts/`, `references/`, and `assets/`, loaded only when required during execution.
 
 **Example SKILL.md:**
@@ -44,7 +44,7 @@ Validate OpenAPI specification files for correctness and compliance.
 1. Read the target OpenAPI spec file (YAML or JSON).
 2. Run the validation script:
    ```
-   scripts/validate.py <spec-file>
+   scripts/validate.py &lt;spec-file&gt;
    ```
 3. Report findings grouped by severity (error, warning, info).
 
