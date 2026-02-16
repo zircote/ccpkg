@@ -807,7 +807,7 @@ When installing a package that declares an MCP server already present in the hos
 
 - **key_name**: The key in the `mcpServers` object (e.g., `"context7"`).
 - **origin**: Derived from the server mode:
-  - Mode 1 (command+args): `command::{command} {args[0]}` (e.g., `command::npx -y @anthropic/context7-mcp`).
+  - Mode 1 (command+args): `command::{command} {args_joined}`, where `{args_joined}` is all elements of the `args` array joined with a single space. If `args` is empty or omitted, the origin is `command::{command}` (no trailing space). For example, `command: "npx"`, `args: ["-y", "@anthropic/context7-mcp"]` yields `command::npx -y @anthropic/context7-mcp`.
   - Mode 2 (embedded mcpb): `bundle::{bundle_path}` normalized to the archive-relative path.
   - Mode 3 (referenced mcpb): the `source` URL verbatim.
 
@@ -817,7 +817,8 @@ Two servers are considered the same when both key_name and origin match.
 
 - Same identity, incoming version higher: replace. Re-render MCP config from the incoming package's template.
 - Same identity, incoming version equal or lower: skip rendering. Track in lockfile only.
-- Same key_name, different origin: conflict. The installer MUST warn the user. In interactive mode, the installer SHOULD offer to keep the existing server, replace it, or install both under distinct keys.
+- When comparing versions, treat `null`/unknown as lower than any concrete semver version. If both are `null`/unknown, keep the existing server (treat as equal).
+- Same key_name, different origin: conflict. In interactive mode, the installer MUST warn the user and offer to keep the existing server, replace it, or install both under distinct keys. In non-interactive mode, the installer MUST fail with a descriptive error (implementations MAY support a preconfigured conflict policy).
 
 **User Override.** Deduplication is the default behavior. Installers MUST provide a mechanism for users to override deduplication:
 
@@ -1059,13 +1060,19 @@ sequenceDiagram
 
     b. If no matching entry exists in `shared_mcp_servers`: render the template, merge into the host config, and add the server to `shared_mcp_servers` with `declared_by` set to the current package.
 
-    c. If a match exists and the incoming version is higher: re-render using the incoming package's template, update `active_source` and `version`, and append the package to `declared_by`.
+    c. If a match exists, compare versions. Treat `null`/unknown versions as lower than any concrete semver version. If both are `null`/unknown, treat them as equal.
 
-    d. If a match exists and the incoming version is equal or lower: skip rendering and append the package to `declared_by` only.
+       - If the incoming version is higher: re-render using the incoming package's template, update `active_source` and `version`, and append the package to `declared_by`.
 
-    e. If the key_name matches but the origin differs: warn the user and offer resolution options (keep, replace, or install both under distinct keys).
+       - If the incoming version is equal or lower (including both `null`): skip rendering and append the package to `declared_by` only.
 
-    f. If the user has disabled dedup for this server (`dedup: false`), skip dedup checks and install the server as a separate entry.
+    d. If the key_name matches but the origin differs (conflict):
+
+       - **Interactive mode**: warn the user and offer resolution options: keep the existing server, replace it, or install both under distinct keys.
+
+       - **Non-interactive mode**: fail the install with a non-zero exit status and a descriptive error. Implementations MAY allow a preconfigured conflict policy (e.g., via CLI flags) to resolve without prompting.
+
+    e. If the user has disabled dedup for this server (`dedup: false`), skip dedup checks and install the server under a package-scoped key (e.g., `{key_name}#{package_name}`). The installer MUST record the concrete key in the lockfile so uninstall can identify the correct entry.
 
     Rendered `.lsp.json` files are written to the install location without deduplication (LSP server dedup is deferred to a future spec version).
 
@@ -1089,7 +1096,7 @@ Uninstalling a package reverses the install process:
 
    a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
 
-   b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-extract its MCP template from the archive cache, re-render with that package's config values, and update `active_source`. If this package was not the active source, no config change is needed.
+   b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-materialize its MCP template, re-render with that package's config values, and update `active_source`. For archive-backed packages, re-extract from the archive cache. For linked packages (`source: link:...`), read the template directly from the linked directory. If this package was not the active source, no config change is needed.
 
    c. If the server has `dedup: false`: remove only this package's copy. Other packages' copies are independent and unaffected.
 4. **Remove lockfile entry.** Remove the package entry from `ccpkg-lock.json`.
@@ -1308,7 +1315,7 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `generated_plugin_json` | `boolean` | Whether `.claude-plugin/plugin.json` was generated by ccpkg during install/link. Controls cleanup on uninstall/unlink — if `true`, the generated file is removed; if `false`, it is left in place. |
 | `enabled_plugins_key` | `string` | The key written to the host's `enabledPlugins` (e.g., `"api-testing@ccpkg"`). Used for clean deregistration on uninstall. |
 | `installed_files` | `string[]` | List of all files written during install, relative to the package directory. Enables deterministic uninstall. Empty for linked packages. |
-| `merged_mcp_servers` | `string[]` | MCP server names merged into the host's `.mcp.json` during install. Used for clean removal on uninstall. |
+| `merged_mcp_servers` | `string[]` | MCP server names merged into the host's `.mcp.json` during install. Superseded by `shared_mcp_servers` for dedup-aware uninstall tracking. Retained for packages that do not participate in dedup (single-server packages with no shared MCP servers). |
 | `config_keys` | `string[]` | Config variable names stored in the host's settings. Used for clean removal on uninstall. |
 | `components` | `object` | Mirror of the manifest `components` object for quick reference. |
 | `remote_sources` | `object` | Map of component path to remote source metadata. Only present for packages with remote component references. Keys are component identifiers; values are objects with `url`, `checksum`, `fetched_at`, and `cache_ttl`. |

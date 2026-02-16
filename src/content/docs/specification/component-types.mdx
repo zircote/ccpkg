@@ -292,7 +292,7 @@ When installing a package that declares an MCP server already present in the hos
 
 - **key_name**: The key in the `mcpServers` object (e.g., `"context7"`).
 - **origin**: Derived from the server mode:
-  - Mode 1 (command+args): `command::{command} {args[0]}` (e.g., `command::npx -y @anthropic/context7-mcp`).
+  - Mode 1 (command+args): `command::{command} {args_joined}`, where `{args_joined}` is all elements of the `args` array joined with a single space. If `args` is empty or omitted, the origin is `command::{command}` (no trailing space). For example, `command: "npx"`, `args: ["-y", "@anthropic/context7-mcp"]` yields `command::npx -y @anthropic/context7-mcp`.
   - Mode 2 (embedded mcpb): `bundle::{bundle_path}` normalized to the archive-relative path.
   - Mode 3 (referenced mcpb): the `source` URL verbatim.
 
@@ -302,7 +302,8 @@ Two servers are considered the same when both key_name and origin match.
 
 - Same identity, incoming version higher: replace. Re-render MCP config from the incoming package's template.
 - Same identity, incoming version equal or lower: skip rendering. Track in lockfile only.
-- Same key_name, different origin: conflict. The installer MUST warn the user. In interactive mode, the installer SHOULD offer to keep the existing server, replace it, or install both under distinct keys.
+- When comparing versions, treat `null`/unknown as lower than any concrete semver version. If both are `null`/unknown, keep the existing server (treat as equal).
+- Same key_name, different origin: conflict. In interactive mode, the installer MUST warn the user and offer to keep the existing server, replace it, or install both under distinct keys. In non-interactive mode, the installer MUST fail with a descriptive error (implementations MAY support a preconfigured conflict policy).
 
 **User Override.** Deduplication is the default behavior. Installers MUST provide a mechanism for users to override deduplication:
 
