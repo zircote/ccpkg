@@ -85,7 +85,7 @@ sequenceDiagram
 
 12. **Generate host plugin manifest.** The installer generates the host's expected plugin manifest inside the install directory from the ccpkg manifest metadata. The manifest path and format are defined in the host's adoption specification. See [Plugin Registration](/specification/install-lifecycle#plugin-registration) for details.
 
-13. **Register with host.** The installer registers the package with the host's extension system using the adapter operations defined in the host's [adoption specification](assistant-adoption.md). This ensures the host discovers the package on next session start.
+13. **Register with host.** The installer registers the package with the host's extension system using the adapter operations defined in the host's [adoption specification](/assistants/). This ensures the host discovers the package on next session start.
 
 14. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root (e.g., `~/.ccpkg/ccpkg-lock.json` for user scope). See [Lockfile Format](/specification/lockfile#lockfile-format).
 
@@ -152,21 +152,21 @@ For quick one-off testing without any persistent side effects, developers can us
 
 # Host Integration
 
-ccpkg integrates with each host's extension or plugin system, leveraging the host's runtime for component registration and namespace isolation. The specific integration mechanism is defined in each host's [adoption specification](assistant-adoption.md).
+ccpkg integrates with each host's extension or plugin system, leveraging the host's runtime for component registration and namespace isolation. The specific integration mechanism is defined in each host's [adoption specification](/assistants/).
 
 ## Bootstrap
 
-On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `plugin_model`.
+On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `extension_model`.
 
 ## Plugin Registration
 
 During installation, the installer performs two host-facing steps as defined by the host's adoption specification:
 
-1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `plugin_model.manifest_path` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
+1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `extension_model.manifest.filename` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
 
-2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `adapter_interface` operations. This ensures the host recognizes the package on the next session start.
+2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `extension_model.registration` mechanism. This ensures the host recognizes the package on the next session start.
 
-These two steps — generating a plugin manifest and registering with the host — are the complete integration surface. The specific files and settings keys are defined in each host's [adoption specification](assistant-adoption.md).
+These two steps — generating a plugin manifest and registering with the host — are the complete integration surface. The specific files and settings keys are defined in each host's [adoption specification](/assistants/).
 
 ## Namespacing
 
@@ -178,7 +178,7 @@ For example, a package named `api-testing` containing `skills/run-suite/` expose
 
 ## Scope and Settings
 
-Each installation scope maps to a different host settings location. The specific paths vary by host and are defined in the host's [adoption specification](assistant-adoption.md) under `configuration.settings_paths`.
+Each installation scope maps to a different host settings location. The specific paths vary by host and are defined in the host's [adoption specification](/assistants/) under `configuration.settings_paths`.
 
 | Scope | Plugin Directory | Behavior |
 |---|---|---|

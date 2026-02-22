@@ -118,5 +118,9 @@
     "#lockfile-format": "/specification/lockfile#lockfile-format",
     "#appendix-d-future-host-integration-targets": "/specification/appendices#appendix-d-future-host-integration-targets",
     "#supply-chain": "/specification/security#supply-chain"
+  },
+  "relativeLinks": {
+    "assistant-adoption.md": "/assistants/",
+    "schemas/assistant-adoption.schema.json": "https://github.com/zircote/ccpkg/blob/main/spec/schemas/assistant-adoption.schema.json"
   }
 }

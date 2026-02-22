@@ -20,7 +20,7 @@ The following components are tool-agnostic and work across any host that support
 
 ## Component Portability Matrix
 
-The portability status of each component type is documented in each host's [adoption specification](assistant-adoption.md) under `component_support`. Consult the relevant adoption spec to determine which components a host supports and at what level.
+The portability status of each component type is documented in each host's [adoption specification](/assistants/) under `component_support`. Consult the relevant adoption spec to determine which components a host supports and at what level.
 
 **Support levels:**
 - **Native**: Component type is natively supported by the host
@@ -49,7 +49,7 @@ Four mechanisms handle tool-specific differences:
 - Prefer MCP for tool integration over host-specific mechanisms.
 - Use `compatibility` to declare minimum host versions rather than excluding hosts.
 - Use per-component `hosts` scoping for host-specific hooks or agents alongside universal skills.
-- Use canonical event names for hook portability. Consult each host's [adoption specification](assistant-adoption.md) for supported events.
+- Use canonical event names for hook portability. Consult each host's [adoption specification](/assistants/) for supported events.
 - Scope agents to specific hosts via `hosts` — agent formats are not yet portable across hosts.
 - Scope LSP components to hosts that support them. Check each host's `component_support.lsp_servers` in its adoption spec.
 - When a host requires an MCP environment variable prefix, declare it via `targets.{host}.mcp_env_prefix`. See the host's adoption spec for the specific prefix value.

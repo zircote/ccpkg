@@ -239,6 +239,21 @@ function rewriteLinks(content, crossReferences) {
 }
 
 /**
+ * Rewrite relative file links using the relativeLinks map.
+ * Handles both plain paths and paths with anchors (e.g., file.md#section).
+ */
+function rewriteRelativeLinks(content, relativeLinks) {
+  if (!relativeLinks) return content;
+  return content.replace(/\]\(([^)#]+?)(#[^)]+)?\)/g, (match, path, anchor) => {
+    if (relativeLinks[path]) {
+      const target = relativeLinks[path];
+      return `](${target}${anchor || ""})`;
+    }
+    return match;
+  });
+}
+
+/**
  * Trim trailing whitespace from each line and ensure exactly one trailing newline.
  */
 function normalizeWhitespace(content) {
@@ -352,6 +367,7 @@ export function generateSpecPages(outputDir) {
 
     // Rewrite cross-page links
     body = rewriteLinks(body, config.crossReferences);
+    body = rewriteRelativeLinks(body, config.relativeLinks);
 
     // Build final file content
     const frontmatter = buildFrontmatter(page);

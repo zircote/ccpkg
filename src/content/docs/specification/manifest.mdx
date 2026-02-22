@@ -126,7 +126,7 @@ The `compatibility` object declares version constraints for host tools. Each key
 }
 ```
 
-Keys are host identifiers as defined in individual [adoption specifications](assistant-adoption.md). Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
+Keys are host identifiers as defined in individual [adoption specifications](/assistants/). Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
 
 ## Targets Object
 
@@ -156,7 +156,7 @@ The following standard fields are defined. Tool-specific adapters MAY define add
 }
 ```
 
-Each key is a host identifier matching an [adoption specification](assistant-adoption.md). The `hook_events` mapping translates canonical event names to host-native event names; the `instructions_file` declares the filename to which assembled instructions are written. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host. See individual adoption specs for the complete event mappings, instruction filenames, and MCP prefixes for each host.
+Each key is a host identifier matching an [adoption specification](/assistants/). The `hook_events` mapping translates canonical event names to host-native event names; the `instructions_file` declares the filename to which assembled instructions are written. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host. See individual adoption specs for the complete event mappings, instruction filenames, and MCP prefixes for each host.
 
 ## Example Manifest
 
