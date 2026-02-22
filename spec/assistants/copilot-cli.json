@@ -104,5 +104,16 @@
       "mcp_servers": ".mcp.json",
       "lsp_servers": ".lsp.json"
     }
+  },
+  "configuration": {
+    "settings_paths": {
+      "user": "~/.copilot/settings.json",
+      "project": ".github/copilot-settings.json"
+    }
+  },
+  "capabilities": {
+    "lazy_loading": false,
+    "hot_reload": false,
+    "managed_settings": false
   }
 }

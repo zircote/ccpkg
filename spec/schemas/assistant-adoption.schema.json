@@ -222,7 +222,7 @@
 
     "extensionModelBundle": {
       "type": "object",
-      "required": ["type", "install_dir", "manifest", "registration", "layout"],
+      "required": ["type", "install_dir", "manifest", "registration"],
       "additionalProperties": false,
       "properties": {
         "type": {
@@ -236,7 +236,7 @@
         },
         "manifest": {
           "type": "object",
-          "required": ["filename", "required_fields"],
+          "required": ["filename"],
           "additionalProperties": false,
           "properties": {
             "filename": {
@@ -252,7 +252,7 @@
         },
         "registration": {
           "type": "object",
-          "required": ["mechanism", "path"],
+          "required": ["mechanism"],
           "additionalProperties": false,
           "properties": {
             "mechanism": {

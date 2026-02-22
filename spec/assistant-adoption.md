@@ -137,12 +137,18 @@ The following example shows `component_paths` version-gated so that the skill in
 {
   "component_paths": {
     ">=1.0.0": {
-      "skills": { "filePaths": { "user": "~/.assistant/skills/{name}.md", "project": ".assistant/skills/{name}.md" } },
-      "hooks": { "configEntry": { "file": ".assistant/hooks.json", "format": "json" } }
+      "skills": { "user": "~/.assistant/skills/{name}.md", "project": ".assistant/skills/{name}.md" },
+      "hooks": {
+        "user": { "file": ".assistant/hooks.json", "format": "json" },
+        "project": { "file": ".assistant/config.json", "format": "json", "key": "hooks" }
+      }
     },
     "<1.0.0": {
-      "skills": { "filePaths": { "user": "~/.assistant/legacy/{name}.md", "project": ".assistant/legacy/{name}.md" } },
-      "hooks": { "configEntry": { "file": ".assistant/config.json", "format": "json", "key": "hooks" } }
+      "skills": { "user": "~/.assistant/legacy/{name}.md", "project": ".assistant/legacy/{name}.md" },
+      "hooks": {
+        "user": { "file": ".assistant/config.json", "format": "json", "key": "hooks" },
+        "project": { "file": ".assistant/config.json", "format": "json", "key": "hooks" }
+      }
     }
   }
 }
@@ -210,13 +216,7 @@ Component path entries fall into two categories based on how the host consumes t
 
 #### File-Based Components
 
-Components that are installed as individual files on disk. The component types `skills`, `agents`, `commands`, and `instructions` use this pattern.
-
-| Property | Type | Required | Description |
-|---|---|---|---|
-| `filePaths` | `object` | REQUIRED | An object with optional `user` and `project` keys, each mapping to a filesystem path string. |
-
-The `filePaths` object:
+Components that are installed as individual files on disk. The component types `skills`, `agents`, `commands`, and `instructions` use this pattern. The component path entry is an object with optional `user` and `project` keys, each a string filesystem path.
 
 | Key | Type | Description |
 |---|---|---|
@@ -225,13 +225,9 @@ The `filePaths` object:
 
 #### Config-Entry Components
 
-Components that are registered as entries within a configuration file rather than placed as standalone files. The component types `hooks`, `mcp_servers`, and `lsp_servers` use this pattern.
+Components that are registered as entries within a configuration file rather than placed as standalone files. The component types `hooks`, `mcp_servers`, and `lsp_servers` use this pattern. The component path entry is an object with optional `user` and `project` keys, each an object describing the configuration file for that scope.
 
-| Property | Type | Required | Description |
-|---|---|---|---|
-| `configEntry` | `object` | REQUIRED | Describes the configuration file where the component is registered. |
-
-The `configEntry` object:
+Each scope object has the following properties:
 
 | Key | Type | Required | Description |
 |---|---|---|---|
@@ -256,47 +252,31 @@ The `component_paths` object as a whole MAY be version-gated at the top level.
 {
   "component_paths": {
     "skills": {
-      "filePaths": {
-        "user": "~/.claude/skills/{name}.md",
-        "project": ".claude/skills/{name}.md"
-      }
+      "user": "~/.claude/skills/{name}.md",
+      "project": ".claude/skills/{name}.md"
     },
     "agents": {
-      "filePaths": {
-        "user": "~/.claude/agents/{name}.md",
-        "project": ".claude/agents/{name}.md"
-      }
+      "user": "~/.claude/agents/{name}.md",
+      "project": ".claude/agents/{name}.md"
     },
     "commands": {
-      "filePaths": {
-        "user": "~/.claude/commands/{name}.md",
-        "project": ".claude/commands/{name}.md"
-      }
+      "user": "~/.claude/commands/{name}.md",
+      "project": ".claude/commands/{name}.md"
     },
     "instructions": {
-      "filePaths": {
-        "project": "CLAUDE.md"
-      }
+      "project": "CLAUDE.md"
     },
     "hooks": {
-      "configEntry": {
-        "file": ".claude/settings.json",
-        "format": "jsonc",
-        "key": "hooks"
-      }
+      "user": { "file": "~/.claude/settings.json", "format": "jsonc", "key": "hooks" },
+      "project": { "file": ".claude/settings.json", "format": "jsonc", "key": "hooks" }
     },
     "mcp_servers": {
-      "configEntry": {
-        "file": ".claude/mcp.json",
-        "format": "json"
-      }
+      "user": { "file": "~/.claude.json", "format": "json", "key": "mcpServers" },
+      "project": { "file": ".mcp.json", "format": "json", "key": "mcpServers" }
     },
     "lsp_servers": {
-      "configEntry": {
-        "file": ".claude/settings.json",
-        "format": "jsonc",
-        "key": "lspServers"
-      }
+      "user": { "file": "~/.claude/settings.json", "format": "jsonc", "key": "lspServers" },
+      "project": { "file": ".claude/settings.json", "format": "jsonc", "key": "lspServers" }
     }
   }
 }

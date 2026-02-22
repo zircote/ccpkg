@@ -111,7 +111,7 @@
   },
   "mcp": {
     "supported": true,
-    "transports": ["stdio", "sse", "http-streaming"],
+    "transports": ["stdio", "sse", "streamable-http"],
     "env_prefix": null
   },
   "extension_model": {
@@ -131,6 +131,12 @@
       "commands": "commands/{name}.toml",
       "hooks": "hooks.json",
       "mcp_servers": ".mcp.json"
+    }
+  },
+  "configuration": {
+    "settings_paths": {
+      "user": "~/.gemini/settings.json",
+      "project": ".gemini/settings.json"
     }
   },
   "capabilities": {

@@ -6,7 +6,7 @@ nav_order: 2
 
 # ccpkg Specification
 
-**Specification Version: 2026-02-14 (Draft)**
+**Specification Version: 2026-02-22 (Draft)**
 
 ## Status
 
@@ -1092,15 +1092,15 @@ ccpkg integrates with each host's extension or plugin system, leveraging the hos
 
 ### Bootstrap
 
-On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `plugin_model`.
+On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `extension_model`.
 
 ### Plugin Registration
 
 During installation, the installer performs two host-facing steps as defined by the host's adoption specification:
 
-1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `plugin_model.manifest_path` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
+1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `extension_model.manifest.filename` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
 
-2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `adapter_interface` operations. This ensures the host recognizes the package on the next session start.
+2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `extension_model.registration` mechanism. This ensures the host recognizes the package on the next session start.
 
 These two steps — generating a plugin manifest and registering with the host — are the complete integration surface. The specific files and settings keys are defined in each host's [adoption specification](assistant-adoption.md).
 
