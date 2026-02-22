@@ -243,16 +243,10 @@
     },
     "compatibility": {
       "type": "object",
-      "description": "Declares version compatibility requirements. Keys are tool identifiers, values are semver range strings.",
-      "properties": {
-        "claude_code": {
-          "type": "string",
-          "description": "Semver range for compatible Claude Code versions (e.g. >=1.0.0, ^2.1.0)."
-        }
-      },
+      "description": "Declares version compatibility requirements. Keys are host identifiers from adoption specifications, values are semver range strings.",
       "additionalProperties": {
         "type": "string",
-        "description": "Semver range for the named tool or runtime."
+        "description": "Semver range for the named host (e.g. >=1.0.0, ^2.1.0)."
       }
     },
     "targets": {

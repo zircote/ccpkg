@@ -1,0 +1,135 @@
+---
+title: "Codex CLI"
+description: "ccpkg adoption specification for Codex CLI by OpenAI."
+---
+
+# Codex CLI
+
+**Vendor:** OpenAI | **Homepage:** [https://developers.openai.com/codex/](https://developers.openai.com/codex/) | **CLI Command:** `codex` | **Version Detection:** `codex --version`
+
+## Component Support
+
+| Component | Support Level | Notes |
+|---|---|---|
+| Skills | Native |  |
+| MCP Servers | Native |  |
+| LSP Servers | Not Supported |  |
+| Hooks | Native | Minimal — notify event only for agent-turn-complete |
+| Agents | Experimental |  |
+| Commands | Native | Via skills system |
+| Instructions | Native |  |
+
+## Component Paths
+
+### File-Based Component Paths
+
+| Component | Scope | Path |
+|---|---|---|
+| Skills | user | `~/.agents/skills/{name}/SKILL.md` |
+| Skills | project | `.agents/skills/{name}/SKILL.md` |
+| Agents | user | `~/.agents/{name}.md` |
+| Agents | project | `.agents/{name}.md` |
+| Commands | user | `~/.agents/skills/{name}/SKILL.md` |
+| Commands | project | `.agents/skills/{name}/SKILL.md` |
+| LSP Servers | — | Not supported |
+| Instructions | user | `~/.agents/AGENTS.md` |
+| Instructions | project | `AGENTS.md` |
+
+### Config-Entry Component Paths
+
+| Component | Scope | File | Format | Key |
+|---|---|---|---|---|
+| Hooks | user | `~/.codex/config.toml` | toml | `hooks` |
+| Hooks | project | `codex.toml` | toml | `hooks` |
+| MCP Servers | user | `~/.codex/config.toml` | toml | `mcp_servers` |
+| MCP Servers | project | `codex.toml` | toml | `mcp_servers` |
+
+
+## Instructions
+
+| Property | Value |
+|---|---|
+| Filename | `AGENTS.md` |
+| Content Format | markdown |
+
+### Instruction Paths
+
+| Scope | Path |
+|---|---|
+| user | `~/.agents/AGENTS.md` |
+| project | `AGENTS.md` |
+
+## Extension Model
+
+**Scatter** — components installed to individual paths defined in Component Paths.
+
+## Hook Events
+
+### Canonical Event Mapping
+
+| Canonical Event | Host Event |
+|---|---|
+| `notification` | `notify` |
+
+### Host-Specific Events
+
+- **agent-turn-complete** — Fires when the agent completes a turn, used with notify.
+
+### Execution Model
+
+command
+
+## MCP Integration
+
+| Property | Value |
+|---|---|
+| Supported | true |
+| Transports | stdio |
+| Env Prefix | None |
+
+## Configuration
+
+| Scope | Path |
+|---|---|
+| user | `~/.codex/config.toml` |
+| project | `codex.toml` |
+
+## Roadmap
+
+### 🔧 1.0.0 — in-progress | [Tracking](https://github.com/openai/codex/pull/11067)
+
+Comprehensive hook system with 5 lifecycle events: PreToolUse, PostToolUse, SessionStop, UserPromptSubmit, AfterAgent
+
+<details>
+<summary>Planned changes</summary>
+
+```json
+{
+  "component_support": {
+    "hooks": {
+      "level": "native",
+      "notes": "5 lifecycle events"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "pre-tool-use": "PreToolUse",
+      "post-tool-use": "PostToolUse",
+      "session-end": "SessionStop",
+      "user-prompt-submit": "UserPromptSubmit",
+      "notification": "notify"
+    },
+    "host_specific_events": [
+      {
+        "name": "AfterAgent",
+        "description": "Fires after agent completes processing."
+      }
+    ],
+    "execution_models": [
+      "command"
+    ]
+  }
+}
+```
+
+</details>

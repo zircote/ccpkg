@@ -20,4 +20,4 @@ description: "Aspirational lazy loading behavior for on-demand component activat
 | MCP server | First tool invocation targeting the server | Server process started |
 | LSP server | First file matching the language scope | Server process started |
 
-**Current behavior:** Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it.
+**Current behavior:** Some hosts load skill frontmatter at startup and defer SKILL.md body loading until invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading in most hosts. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it. Check the host's adoption specification `capabilities.lazy_loading` field for current support status.

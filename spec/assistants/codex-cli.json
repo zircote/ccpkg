@@ -1,0 +1,126 @@
+{
+  "$schema": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "spec_version": "2026-02-22",
+  "id": "codex-cli",
+  "display_name": "Codex CLI",
+  "vendor": "OpenAI",
+  "homepage": "https://developers.openai.com/codex/",
+  "repository": "https://github.com/openai/codex",
+  "cli_command": "codex",
+  "version_detection": "codex --version",
+  "last_updated": "2026-02-22",
+  "component_support": {
+    "skills": { "level": "native" },
+    "mcp_servers": { "level": "native" },
+    "lsp_servers": { "level": "not-supported" },
+    "hooks": {
+      "level": "native",
+      "notes": "Minimal — notify event only for agent-turn-complete"
+    },
+    "agents": { "level": "experimental" },
+    "commands": { "level": "native", "notes": "Via skills system" },
+    "instructions": { "level": "native" }
+  },
+  "component_paths": {
+    "skills": {
+      "user": "~/.agents/skills/{name}/SKILL.md",
+      "project": ".agents/skills/{name}/SKILL.md"
+    },
+    "agents": {
+      "user": "~/.agents/{name}.md",
+      "project": ".agents/{name}.md"
+    },
+    "commands": {
+      "user": "~/.agents/skills/{name}/SKILL.md",
+      "project": ".agents/skills/{name}/SKILL.md"
+    },
+    "hooks": {
+      "user": {
+        "file": "~/.codex/config.toml",
+        "format": "toml",
+        "key": "hooks"
+      },
+      "project": { "file": "codex.toml", "format": "toml", "key": "hooks" }
+    },
+    "mcp_servers": {
+      "user": {
+        "file": "~/.codex/config.toml",
+        "format": "toml",
+        "key": "mcp_servers"
+      },
+      "project": {
+        "file": "codex.toml",
+        "format": "toml",
+        "key": "mcp_servers"
+      }
+    },
+    "lsp_servers": null,
+    "instructions": {
+      "user": "~/.agents/AGENTS.md",
+      "project": "AGENTS.md"
+    }
+  },
+  "instructions": {
+    "filename": "AGENTS.md",
+    "content_format": "markdown",
+    "paths": {
+      "user": "~/.agents/AGENTS.md",
+      "project": "AGENTS.md"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "notification": "notify"
+    },
+    "host_specific_events": [
+      {
+        "name": "agent-turn-complete",
+        "description": "Fires when the agent completes a turn, used with notify."
+      }
+    ],
+    "execution_models": ["command"]
+  },
+  "mcp": {
+    "supported": true,
+    "transports": ["stdio"],
+    "env_prefix": null
+  },
+  "extension_model": {
+    "type": "scatter"
+  },
+  "configuration": {
+    "settings_paths": {
+      "user": "~/.codex/config.toml",
+      "project": "codex.toml"
+    }
+  },
+  "roadmap": [
+    {
+      "target_version": "1.0.0",
+      "status": "in-progress",
+      "tracking": "https://github.com/openai/codex/pull/11067",
+      "description": "Comprehensive hook system with 5 lifecycle events: PreToolUse, PostToolUse, SessionStop, UserPromptSubmit, AfterAgent",
+      "changes": {
+        "component_support": {
+          "hooks": { "level": "native", "notes": "5 lifecycle events" }
+        },
+        "hook_events": {
+          "canonical_map": {
+            "pre-tool-use": "PreToolUse",
+            "post-tool-use": "PostToolUse",
+            "session-end": "SessionStop",
+            "user-prompt-submit": "UserPromptSubmit",
+            "notification": "notify"
+          },
+          "host_specific_events": [
+            {
+              "name": "AfterAgent",
+              "description": "Fires after agent completes processing."
+            }
+          ],
+          "execution_models": ["command"]
+        }
+      }
+    }
+  ]
+}

@@ -112,6 +112,16 @@ stateDiagram-v2
 
 ---
 
+## Relationship to Assistant Adoption Specifications
+
+The ccpkg specification is structured as a layered system. This core specification defines the universal packaging format — archive structure, manifest schema, component types, install lifecycle, and security model. It is intentionally tool-agnostic: no host-specific filenames, settings paths, or plugin registration mechanisms appear in the core spec.
+
+Host-specific integration details are captured in **assistant adoption specifications**, one per AI coding assistant. Each adoption spec declares how ccpkg maps to a particular host's conventions: instruction filenames, hook event names, plugin registration steps, settings paths, and component support levels. Adoption specs are machine-validated against the [Assistant Adoption Specification Schema](schemas/assistant-adoption.schema.json) and published alongside this specification in the `spec/assistants/` directory.
+
+The [Assistant Adoption Specification](assistant-adoption.md) defines the normative contract for what an adoption spec MUST contain. Installers use adoption specs at install time to perform host-specific adapter operations (generating plugin manifests, registering with the host, translating hook events). Package authors consult adoption specs to understand which components each host supports and how to structure portable packages.
+
+---
+
 ## Archive Format
 
 ### File Extension and MIME Type
@@ -161,9 +171,9 @@ example-plugin-1.2.0.ccpkg (ZIP)
 ├── instructions/
 │   ├── base.md                     # Base instructions (shared across all hosts)
 │   └── hosts/                      # Per-host overlay files
-│       ├── claude.md               # Claude-specific overlay
-│       ├── copilot.md              # Copilot-specific overlay
-│       └── gemini.md               # Gemini-specific overlay
+│       ├── claude-code.md           # Claude Code-specific overlay
+│       ├── copilot-cli.md          # Copilot-specific overlay
+│       └── gemini-cli.md           # Gemini-specific overlay
 ├── config.schema.json              # OPTIONAL — JSON Schema for config
 ├── icon.png                        # OPTIONAL — package icon (PNG, max 512x512)
 └── LICENSE                         # OPTIONAL — license file
@@ -239,7 +249,7 @@ Each component field that accepts an array (`skills`, `agents`, `commands`) supp
       "skills/universal-skill",
       {
         "path": "skills/claude-specific-skill",
-        "hosts": ["claude"]
+        "hosts": ["claude-code"]
       }
     ],
     "hooks": "hooks/hooks.json",
@@ -247,7 +257,7 @@ Each component field that accepts an array (`skills`, `agents`, `commands`) supp
       "agents/universal-agent",
       {
         "path": "agents/copilot-agent",
-        "hosts": ["copilot"]
+        "hosts": ["copilot-cli"]
       }
     ]
   }
@@ -290,13 +300,13 @@ The `compatibility` object declares version constraints for host tools. Each key
 ```json
 {
   "compatibility": {
-    "claude_code": ">=1.0.0",
-    "codex_cli": ">=0.5.0"
+    "host-a": ">=1.0.0",
+    "host-b": ">=0.5.0"
   }
 }
 ```
 
-Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
+Keys are host identifiers as defined in individual [adoption specifications](assistant-adoption.md). Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
 
 ### Targets Object
 
@@ -308,66 +318,25 @@ The following standard fields are defined. Tool-specific adapters MAY define add
 |---|---|---|
 | `instructions_file` | `string` | OPTIONAL. Filename to which assembled instructions are written for this host. |
 | `hook_events` | `object` | OPTIONAL. Maps canonical event names (lowercase-hyphenated keys) to host-native event name strings. |
-| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection (e.g., Copilot uses `COPILOT_MCP_`). |
+| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection. See the host's adoption specification for the specific prefix. |
 
 ```json
 {
   "targets": {
-    "claude": {
-      "instructions_file": "CLAUDE.md",
+    "<host-id>": {
+      "instructions_file": "HOST-INSTRUCTIONS.md",
       "hook_events": {
-        "pre-tool-use": "PreToolUse",
-        "post-tool-use": "PostToolUse",
-        "session-start": "SessionStart",
-        "session-end": "SessionStop",
-        "notification": "Notification",
-        "pre-compact": "PreCompact",
-        "user-prompt-submit": "UserPromptSubmit"
-      }
-    },
-    "codex": {
-      "instructions_file": "AGENTS.md",
-      "hook_events": {
-        "post-tool-use": "AfterToolUse",
-        "notification": "notify"
-      }
-    },
-    "copilot": {
-      "instructions_file": ".github/copilot-instructions.md",
-      "mcp_env_prefix": "COPILOT_MCP_",
-      "hook_events": {
-        "pre-tool-use": "preToolUse",
-        "post-tool-use": "postToolUse",
-        "session-start": "sessionStart",
-        "session-end": "sessionEnd",
-        "user-prompt-submit": "userPromptSubmitted",
-        "error": "errorOccurred"
-      }
-    },
-    "gemini": {
-      "instructions_file": "GEMINI.md",
-      "hook_events": {
-        "pre-tool-use": "BeforeTool",
-        "post-tool-use": "AfterTool",
-        "session-start": "SessionStart",
-        "session-end": "SessionEnd",
-        "notification": "Notification",
-        "pre-compact": "PreCompress"
-      }
-    },
-    "opencode": {
-      "instructions_file": "AGENTS.md",
-      "hook_events": {
-        "pre-tool-use": "tool.execute.before",
-        "post-tool-use": "tool.execute.after",
-        "pre-compact": "experimental.session.compacting"
-      }
+        "pre-tool-use": "HostPreToolEvent",
+        "post-tool-use": "HostPostToolEvent",
+        "session-start": "HostSessionStart"
+      },
+      "mcp_env_prefix": "HOST_MCP_"
     }
   }
 }
 ```
 
-Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode uses TypeScript plugin hooks rather than shell-based hooks, so only the closest equivalents are mapped. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host.
+Each key is a host identifier matching an [adoption specification](assistant-adoption.md). The `hook_events` mapping translates canonical event names to host-native event names; the `instructions_file` declares the filename to which assembled instructions are written. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host. See individual adoption specs for the complete event mappings, instruction filenames, and MCP prefixes for each host.
 
 ### Example Manifest
 
@@ -397,8 +366,8 @@ Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode 
     "instructions": {
       "base": "instructions/base.md",
       "hosts": {
-        "claude": "instructions/hosts/claude.md",
-        "copilot": "instructions/hosts/copilot.md"
+        "claude-code": "instructions/hosts/claude-code.md",
+        "copilot-cli": "instructions/hosts/copilot-cli.md"
       }
     }
   },
@@ -421,13 +390,13 @@ Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode 
     }
   },
   "compatibility": {
-    "claude_code": ">=1.0.0"
+    "claude-code": ">=1.0.0"
   },
   "targets": {
-    "claude": {
+    "claude-code": {
       "instructions_file": "CLAUDE.md"
     },
-    "codex": {
+    "codex-cli": {
       "instructions_file": "AGENTS.md"
     }
   },
@@ -455,7 +424,7 @@ Skills conform to the [Agent Skills specification](https://agentskills.io/specif
 Skills support three-tier progressive disclosure to minimize context token usage:
 
 1. **Metadata** (~100 tokens): The `name` and `description` from frontmatter, loaded at session startup for all installed skills.
-2. **Instructions** (<5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
+2. **Instructions** (&lt;5000 tokens recommended): The full `SKILL.md` body, loaded when the skill is activated.
 3. **Resources** (as needed): Files in `scripts/`, `references/`, and `assets/`, loaded only when required during execution.
 
 **Example SKILL.md:**
@@ -478,7 +447,7 @@ Validate OpenAPI specification files for correctness and compliance.
 1. Read the target OpenAPI spec file (YAML or JSON).
 2. Run the validation script:
    ```
-   scripts/validate.py <spec-file>
+   scripts/validate.py &lt;spec-file&gt;
    ```
 3. Report findings grouped by severity (error, warning, info).
 
@@ -622,30 +591,22 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
 
 #### Canonical Event Vocabulary
 
-The event types above use Claude Code's naming convention. ccpkg also defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
+ccpkg defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](#targets-object)).
 
-**Canonical event names and host mappings:**
+**Canonical event names:**
 
-| Canonical Event | Claude Code | Gemini CLI | OpenCode | Codex CLI | Copilot | Description |
-|---|---|---|---|---|---|---|
-| `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
-| `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
-| `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
-| `session-end` | `SessionStop` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
-| `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
-| `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
-| `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
-| `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
+| Canonical Event | Description |
+|---|---|
+| `pre-tool-use` | Before a tool invocation |
+| `post-tool-use` | After a tool invocation completes |
+| `session-start` | When a coding session begins |
+| `session-end` | When a coding session ends |
+| `notification` | On system alerts or notifications |
+| `error` | On error during agent execution |
+| `pre-compact` | Before context/history compression |
+| `user-prompt-submit` | When user submits a prompt |
 
-A `—` means the host has no equivalent event. The canonical vocabulary covers events supported by 3+ hosts.
-
-**Host-specific events NOT in canonical vocabulary:**
-
-- **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
-- **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
-- **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
-- **Codex CLI**: (none beyond the two listed)
-- **Copilot**: (none beyond the six listed)
+Not all hosts support all canonical events. The mapping from canonical names to host-native event names is defined in each host's [adoption specification](assistant-adoption.md#hook-event-mappings). Hosts MAY also define additional events beyond the canonical vocabulary; these are documented in the host's adoption spec.
 
 **Usage rules:**
 
@@ -851,9 +812,9 @@ When `components.instructions` is an object, it declares a base file and optiona
 "instructions": {
   "base": "instructions/base.md",
   "hosts": {
-    "claude": "instructions/hosts/claude.md",
-    "copilot": "instructions/hosts/copilot.md",
-    "gemini": "instructions/hosts/gemini.md"
+    "claude-code": "instructions/hosts/claude-code.md",
+    "copilot-cli": "instructions/hosts/copilot-cli.md",
+    "gemini-cli": "instructions/hosts/gemini-cli.md"
   }
 }
 ```
@@ -1001,8 +962,8 @@ sequenceDiagram
     Installer->>Installer: Extract archive to install location
     Installer->>Installer: Render templates + dedup MCP
     Installer->>Installer: Store config values in host settings
-    Installer->>Installer: Generate .claude-plugin/plugin.json
-    Installer->>Host: Add to enabledPlugins in settings.json
+    Installer->>Installer: Generate host plugin manifest
+    Installer->>Host: Register package with host
     Installer->>Installer: Update lockfile
     Installer->>User: Installation complete. Restart session to activate.
 ```
@@ -1058,9 +1019,9 @@ sequenceDiagram
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
-12. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the install directory from the ccpkg manifest metadata. See [Plugin Registration](#plugin-registration) for the field mapping.
+12. **Generate host plugin manifest.** The installer generates the host's expected plugin manifest inside the install directory from the ccpkg manifest metadata. The manifest path and format are defined in the host's adoption specification. See [Plugin Registration](#plugin-registration) for details.
 
-13. **Register with host.** The installer adds `{name}@ccpkg` to the `enabledPlugins` object in the host's settings file (`settings.json`). This registers the package as an enabled plugin for the host to discover on next session start.
+13. **Register with host.** The installer registers the package with the host's extension system using the adapter operations defined in the host's [adoption specification](assistant-adoption.md). This ensures the host discovers the package on next session start.
 
 14. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root (e.g., `~/.ccpkg/ccpkg-lock.json` for user scope). See [Lockfile Format](#lockfile-format).
 
@@ -1071,7 +1032,7 @@ sequenceDiagram
 Uninstalling a package reverses the install process:
 
 1. **Remove the package directory** from the install location (`~/.ccpkg/plugins/{name}/` or `{project-root}/.ccpkg/plugins/{name}/`).
-2. **Remove from enabledPlugins.** Remove the `{name}@ccpkg` entry from the host's `enabledPlugins` in `settings.json`.
+2. **Deregister from host.** Remove the package registration from the host's settings using the adapter operations defined in the host's adoption specification.
 3. **Remove or reassign MCP servers.** For each MCP server the package declared:
 
    a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
@@ -1105,87 +1066,63 @@ Installers SHOULD support a dev mode that creates a symbolic link from the plugi
 
 1. **Validate source.** The installer validates that the target directory contains a valid `manifest.json`.
 2. **Collect config values.** The installer prompts for any required config values, same as a normal install.
-3. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the source directory from the manifest metadata (same mapping as install step 12).
+3. **Generate host plugin manifest.** The installer generates the host's expected plugin manifest inside the source directory from the manifest metadata (same mapping as install step 12).
 4. **Create symlink.** A symbolic link is created at `~/.ccpkg/plugins/{name}` pointing to the source directory.
-5. **Register with host.** The installer adds `{name}@ccpkg` to `enabledPlugins` in the host's settings, renders templates, and stores config values.
-6. **Update lockfile.** The lockfile records the package with `"source": "link:{absolute-path}"`, `"linked": true`, and `"generated_plugin_json": true` (if the `.claude-plugin/plugin.json` was created by ccpkg rather than pre-existing).
+5. **Register with host.** The installer registers the package with the host using the adapter operations defined in the host's adoption specification, renders templates, and stores config values.
+6. **Update lockfile.** The lockfile records the package with `"source": "link:{absolute-path}"`, `"linked": true`, and `"generated_plugin_manifest": true` (if the host plugin manifest was created by ccpkg rather than pre-existing).
 
 #### Unlink
 
 1. **Remove symlink.** Remove the symlink from `~/.ccpkg/plugins/{name}`.
-2. **Clean up generated files.** If the lockfile entry has `"generated_plugin_json": true`, remove the `.claude-plugin/` directory from the source directory. If the plugin.json was pre-existing (not generated by ccpkg), leave it in place.
-3. **Deregister from host.** Remove `{name}@ccpkg` from `enabledPlugins` and remove the lockfile entry.
+2. **Clean up generated files.** If the lockfile entry has `"generated_plugin_manifest": true`, remove the host plugin manifest directory from the source directory. If the manifest was pre-existing (not generated by ccpkg), leave it in place.
+3. **Deregister from host.** Remove the package registration from the host's settings and remove the lockfile entry.
 4. **Preserve source.** The source directory itself MUST NOT be deleted.
 
 Linked packages MUST be distinguishable from installed archives in listings and status output.
 
 #### Session-Only Testing
 
-For quick one-off testing without any persistent side effects, developers can use the host's `--plugin-dir` CLI flag (e.g., `claude --plugin-dir ~/Projects/my-plugin`). This loads the plugin for a single session only — no symlinks, no lockfile entries, no settings modifications.
+For quick one-off testing without any persistent side effects, developers can use the host's plugin directory CLI flag (if supported). This loads the plugin for a single session only — no symlinks, no lockfile entries, no settings modifications. Consult the host's documentation for the specific flag name.
 
 ---
 
 ## Host Integration
 
-ccpkg installs packages as Claude Code plugins, leveraging the host's plugin runtime for component registration and namespace isolation.
+ccpkg integrates with each host's extension or plugin system, leveraging the host's runtime for component registration and namespace isolation. The specific integration mechanism is defined in each host's [adoption specification](assistant-adoption.md).
 
 ### Bootstrap
 
-On first use, ccpkg registers itself as a plugin marketplace by adding an entry to the host's `settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "ccpkg": {
-      "source": {
-        "source": "directory",
-        "path": "~/.ccpkg/plugins"
-      }
-    }
-  }
-}
-```
-
-The `directory` source type tells Claude Code to discover plugins by scanning `~/.ccpkg/plugins/`. Each subdirectory containing a `.claude-plugin/plugin.json` is treated as a plugin.
+On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `plugin_model`.
 
 ### Plugin Registration
 
-During installation, the installer performs two host-facing steps:
+During installation, the installer performs two host-facing steps as defined by the host's adoption specification:
 
-1. **Generate `.claude-plugin/plugin.json`.** Created inside the install directory, mapping manifest fields to plugin manifest fields:
+1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `plugin_model.manifest_path` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
 
-   | Manifest Field | plugin.json Field |
-   |---|---|
-   | `name` | `name` |
-   | `version` | `version` |
-   | `description` | `description` |
-   | `author` | `author` |
+2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `adapter_interface` operations. This ensures the host recognizes the package on the next session start.
 
-   Package authors SHOULD NOT include `.claude-plugin/` in their archives. If a `.claude-plugin/plugin.json` is present in the archive, the installer MUST use the generated version (from manifest metadata) and MAY warn the author.
-
-2. **Add to `enabledPlugins`.** The installer adds `{name}@ccpkg: true` to the `enabledPlugins` object in `settings.json`. This ensures the host recognizes the plugin as enabled.
-
-These two steps — a plugin.json file in the discovery directory and an enabledPlugins entry — are the complete integration surface. No other host APIs or internal files need to be modified.
+These two steps — generating a plugin manifest and registering with the host — are the complete integration surface. The specific files and settings keys are defined in each host's [adoption specification](assistant-adoption.md).
 
 ### Namespacing
 
-The host's plugin system provides namespacing automatically. The manifest `name` maps to the plugin.json `name`, which becomes the namespace prefix. All components are exposed as `{package-name}:{component-name}`, with component names derived from directory names (skills, agents) or file names (commands). No file editing or frontmatter rewriting is required.
+The host's plugin system provides namespacing automatically. The manifest `name` becomes the namespace prefix. All components are exposed as `{package-name}:{component-name}`, with component names derived from directory names (skills, agents) or file names (commands). No file editing or frontmatter rewriting is required.
 
 For example, a package named `api-testing` containing `skills/run-suite/` exposes the skill as `/api-testing:run-suite`.
 
-> **Note:** User-level skills (`~/.claude/skills/`) and commands (`~/.claude/commands/`) cannot be namespaced because the host flattens subdirectories. This is why ccpkg installs packages as plugins.
+> **Note:** Some hosts flatten user-level component directories, preventing namespace isolation. This is why ccpkg installs packages through the host's plugin system rather than directly into user-level component directories.
 
 ### Scope and Settings
 
-Each installation scope maps to a different host settings location:
+Each installation scope maps to a different host settings location. The specific paths vary by host and are defined in the host's [adoption specification](assistant-adoption.md) under `configuration.settings_paths`.
 
-| Scope | Settings Location | Plugin Directory | Behavior |
-|---|---|---|---|
-| **User** | `~/.claude/settings.json` | `~/.ccpkg/plugins/` | Available in all sessions |
-| **Project** | `{project}/.claude/settings.json` | `{project}/.ccpkg/plugins/` | Available in project sessions; settings committed to git |
-| **Managed** | Enterprise/org managed settings | N/A | Read-only; admins can allowlist ccpkg via `strictKnownMarketplaces` |
+| Scope | Plugin Directory | Behavior |
+|---|---|---|
+| **User** | `~/.ccpkg/plugins/` | Available in all sessions |
+| **Project** | `{project}/.ccpkg/plugins/` | Available in project sessions; settings committed to git |
+| **Managed** | Per host adoption spec | Read-only; admins can allowlist ccpkg via host-specific managed settings |
 
-Project-scoped settings are committed to version control. When a team member opens a project with ccpkg plugins declared in `.claude/settings.json`, the host prompts them to install the referenced plugins.
+Project-scoped settings are committed to version control. When a team member opens a project with ccpkg plugins declared in the host's settings file, the host prompts them to install the referenced plugins.
 
 Settings precedence follows the host's resolution order: **Managed > Local > Project > User**. A managed setting always wins; a project setting overrides user-level for the duration of that project session.
 
@@ -1217,10 +1154,10 @@ The lockfile records the state of all installed packages at a given scope. It en
       "source": "https://example.com/api-testing-1.0.0.ccpkg",
       "config_hash": "sha256:f7e8d9c0...",
       "linked": false,
-      "generated_plugin_json": true,
-      "enabled_plugins_key": "api-testing@ccpkg",
+      "generated_plugin_manifest": true,
+      "host_registration_key": "api-testing@ccpkg",
       "installed_files": [
-        ".claude-plugin/plugin.json",
+        "plugin-manifest.json",
         "manifest.json",
         "skills/openapi-validator/SKILL.md",
         "skills/request-generator/SKILL.md",
@@ -1254,8 +1191,8 @@ The lockfile records the state of all installed packages at a given scope. It en
       "source": "link:/Users/me/Projects/my-dev-plugin",
       "config_hash": "sha256:e5d4c3b2...",
       "linked": true,
-      "generated_plugin_json": true,
-      "enabled_plugins_key": "my-dev-plugin@ccpkg",
+      "generated_plugin_manifest": true,
+      "host_registration_key": "my-dev-plugin@ccpkg",
       "installed_files": [],
       "merged_mcp_servers": [],
       "config_keys": ["DEBUG_MODE"],
@@ -1296,8 +1233,8 @@ The lockfile records the state of all installed packages at a given scope. It en
 | `source` | `string` | The URL or path from which the package was installed. Prefixed with `link:` for dev-mode linked packages (e.g., `link:/Users/me/my-plugin`). |
 | `config_hash` | `string` | SHA-256 hash of the resolved config values (excluding secrets). Used to detect config drift. |
 | `linked` | `boolean` | Whether this is a dev-linked package (symlink to source directory). |
-| `generated_plugin_json` | `boolean` | Whether `.claude-plugin/plugin.json` was generated by ccpkg during install/link. Controls cleanup on uninstall/unlink — if `true`, the generated file is removed; if `false`, it is left in place. |
-| `enabled_plugins_key` | `string` | The key written to the host's `enabledPlugins` (e.g., `"api-testing@ccpkg"`). Used for clean deregistration on uninstall. |
+| `generated_plugin_manifest` | `boolean` | Whether the host plugin manifest was generated by ccpkg during install/link. Controls cleanup on uninstall/unlink — if `true`, the generated manifest is removed; if `false`, it is left in place. |
+| `host_registration_key` | `string` | The key written to the host's registration system (e.g., `"api-testing@ccpkg"`). Used for clean deregistration on uninstall. |
 | `installed_files` | `string[]` | List of all files written during install, relative to the package directory. Enables deterministic uninstall. Empty for linked packages. |
 | `merged_mcp_servers` | `string[]` | MCP server names merged into the host's `.mcp.json` during install. Superseded by `shared_mcp_servers` for dedup-aware uninstall tracking. Retained for packages that do not participate in dedup (single-server packages with no shared MCP servers). |
 | `config_keys` | `string[]` | Config variable names stored in the host's settings. Used for clean removal on uninstall. |
@@ -1639,23 +1576,14 @@ The following components are tool-agnostic and work across any host that support
 
 ### Component Portability Matrix
 
-The following matrix indicates the portability status of each component type across known hosts. This is informational — hosts not listed here may support any subset of components.
+The portability status of each component type is documented in each host's [adoption specification](assistant-adoption.md) under `component_support`. Consult the relevant adoption spec to determine which components a host supports and at what level.
 
-| Component | Claude Code | Copilot | Codex CLI | Gemini CLI | OpenCode |
-|---|---|---|---|---|---|
-| Skills (SKILL.md) | Native | Via instructions | Native | Native | Native |
-| MCP servers | Native | Native (COPILOT_MCP_ prefix) | Native | Native | Native |
-| LSP servers | Native (via plugins) | Not supported | Not supported | Experimental (TS/JS) | Experimental (27+ languages) |
-| Hooks | Native (14 events) | Native (6 events) | Minimal (2 events) | Native (11 events) | Plugin hooks (TypeScript) |
-| Agents (AGENT.md) | Native | Native (.github/agents/) | Not supported | Experimental (sub-agents) | Native (custom agents) |
-| Commands | Native | Not supported | Deprecated (prompts) | Native (TOML files) | Native (Markdown files) |
-| Instructions | CLAUDE.md | .github/copilot-instructions.md | AGENTS.md | GEMINI.md (configurable) | AGENTS.md (fallback: CLAUDE.md) |
-
-**Key:**
+**Support levels:**
 - **Native**: Component type is natively supported by the host
-- **Via [mechanism]**: Component concept maps to a different host mechanism (adapter needed)
+- **Via adapter**: Component concept maps to a different host mechanism (adapter needed)
+- **Experimental**: Host support exists but is not yet stable
 - **Not supported**: Host has no equivalent; component is silently skipped
-- **Partial**: Some features of the component type work; others do not
+- **Deprecated**: Host support exists but is scheduled for removal
 
 Package authors SHOULD use per-component host scoping (see [Components Object](#components-object)) to include host-specific variants of components. Authors SHOULD NOT assume all hosts support all component types.
 
@@ -1677,10 +1605,10 @@ Four mechanisms handle tool-specific differences:
 - Prefer MCP for tool integration over host-specific mechanisms.
 - Use `compatibility` to declare minimum host versions rather than excluding hosts.
 - Use per-component `hosts` scoping for host-specific hooks or agents alongside universal skills.
-- Use canonical event names for hook portability (4 of 5 hosts support native hooks; Codex CLI has minimal support).
-- Scope agents to specific hosts via `hosts` -- agent formats are not yet portable across hosts.
-- Scope LSP components to supported hosts (native in Claude Code; experimental in Gemini CLI and OpenCode).
-- When targeting Copilot, use `targets.copilot.mcp_env_prefix` to declare the `COPILOT_MCP_` credential prefix.
+- Use canonical event names for hook portability. Consult each host's [adoption specification](assistant-adoption.md) for supported events.
+- Scope agents to specific hosts via `hosts` — agent formats are not yet portable across hosts.
+- Scope LSP components to hosts that support them. Check each host's `component_support.lsp_servers` in its adoption spec.
+- When a host requires an MCP environment variable prefix, declare it via `targets.{host}.mcp_env_prefix`. See the host's adoption spec for the specific prefix value.
 - Test packages across multiple hosts when possible.
 
 ---
@@ -1745,7 +1673,7 @@ The following package names are reserved and MUST NOT be used by third-party pac
 
 ## Appendix D: Future Host Integration Targets
 
-The following features are **not currently implementable** without changes to the host application (Claude Code). They are documented here as aspirational targets to guide future host development. ccpkg implementations MUST NOT depend on these features and MUST NOT claim to provide them.
+The following features are **not currently implementable** without changes to host applications. They are documented here as aspirational targets to guide future host development. ccpkg implementations MUST NOT depend on these features and MUST NOT claim to provide them.
 
 ### D.1 Hot-Reload After Install
 
@@ -1753,7 +1681,7 @@ The following features are **not currently implementable** without changes to th
 
 **Requires:** A host API or file-watch mechanism to detect new plugins mid-session and load them into the running context.
 
-**Current behavior:** The host reads `installed_plugins.json` and scans plugin directories at session startup only. Changes to plugin registration take effect on the next session start. The installer informs the user that a restart is required.
+**Current behavior:** Hosts typically discover plugins by scanning plugin directories at session startup only. Changes to plugin registration take effect on the next session start. The installer informs the user that a restart is required.
 
 ### D.2 Host-Aware Lockfile Loading
 
@@ -1761,7 +1689,7 @@ The following features are **not currently implementable** without changes to th
 
 **Requires:** The host application to understand the ccpkg lockfile format and use it as a package index.
 
-**Current behavior:** The host discovers packages via `extraKnownMarketplaces` and standard plugin directory scanning. The ccpkg lockfile is used only by the ccpkg installer for lifecycle management (install, update, uninstall), not by the host.
+**Current behavior:** Hosts discover packages via their native plugin discovery mechanisms (directory scanning, marketplace registration, etc.). The ccpkg lockfile is used only by the ccpkg installer for lifecycle management (install, update, uninstall), not by the host.
 
 ### D.3 Runtime Component State Machine
 
@@ -1788,7 +1716,7 @@ The following features are **not currently implementable** without changes to th
 | MCP server | First tool invocation targeting the server | Server process started |
 | LSP server | First file matching the language scope | Server process started |
 
-**Current behavior:** Claude Code loads skill frontmatter at startup and defers SKILL.md body loading until Skill tool invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it.
+**Current behavior:** Some hosts load skill frontmatter at startup and defer SKILL.md body loading until invocation. This partial lazy loading is host-native behavior, not something ccpkg controls. Other component types do not have equivalent deferred loading in most hosts. ccpkg packages should be structured to take advantage of whatever lazy loading the host provides, but MUST NOT depend on it. Check the host's adoption specification `capabilities.lazy_loading` field for current support status.
 
 ---
 

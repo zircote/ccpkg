@@ -1,0 +1,171 @@
+{
+  "$schema": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "spec_version": "2026-02-22",
+  "id": "claude-code",
+  "display_name": "Claude Code",
+  "vendor": "Anthropic",
+  "homepage": "https://code.claude.com/docs/",
+  "repository": "https://github.com/anthropics/claude-code",
+  "cli_command": "claude",
+  "version_detection": "claude --version",
+  "last_updated": "2026-02-22",
+  "component_support": {
+    "skills": { "level": "native" },
+    "mcp_servers": { "level": "native" },
+    "lsp_servers": { "level": "native", "notes": "Via plugin system" },
+    "hooks": { "level": "native", "notes": "17 events, 3 execution models" },
+    "agents": { "level": "native" },
+    "commands": { "level": "native" },
+    "instructions": { "level": "native" }
+  },
+  "component_paths": {
+    "skills": {
+      "user": "~/.claude/skills/{name}/SKILL.md",
+      "project": ".claude/skills/{name}/SKILL.md"
+    },
+    "agents": {
+      "user": "~/.claude/agents/{name}.md",
+      "project": ".claude/agents/{name}.md"
+    },
+    "commands": {
+      "user": "~/.claude/commands/{name}.md",
+      "project": ".claude/commands/{name}.md"
+    },
+    "hooks": {
+      "user": {
+        "file": "~/.claude/settings.json",
+        "format": "json",
+        "key": "hooks"
+      },
+      "project": {
+        "file": ".claude/settings.json",
+        "format": "json",
+        "key": "hooks"
+      }
+    },
+    "mcp_servers": {
+      "user": {
+        "file": "~/.claude.json",
+        "format": "json",
+        "key": "mcpServers"
+      },
+      "project": { "file": ".mcp.json", "format": "json", "key": "mcpServers" }
+    },
+    "lsp_servers": {
+      "user": {
+        "file": "~/.claude/settings.json",
+        "format": "json",
+        "key": "lspServers"
+      },
+      "project": {
+        "file": ".claude/settings.json",
+        "format": "json",
+        "key": "lspServers"
+      }
+    },
+    "instructions": {
+      "user": "~/.claude/CLAUDE.md",
+      "project": "CLAUDE.md"
+    }
+  },
+  "instructions": {
+    "filename": "CLAUDE.md",
+    "content_format": "markdown",
+    "merge_strategy": "append",
+    "paths": {
+      "user": "~/.claude/CLAUDE.md",
+      "project": "CLAUDE.md"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "pre-tool-use": "PreToolUse",
+      "post-tool-use": "PostToolUse",
+      "session-start": "SessionStart",
+      "session-end": "SessionStop",
+      "notification": "Notification",
+      "pre-compact": "PreCompact",
+      "user-prompt-submit": "UserPromptSubmit"
+    },
+    "host_specific_events": [
+      {
+        "name": "PostToolUseFailure",
+        "description": "Fires when a tool invocation fails or returns an error."
+      },
+      {
+        "name": "PermissionRequest",
+        "description": "Fires when the assistant requests user permission for a tool action."
+      },
+      {
+        "name": "Stop",
+        "description": "Fires when the assistant stops generating a response."
+      },
+      {
+        "name": "SubagentStart",
+        "description": "Fires when a subagent is spawned."
+      },
+      {
+        "name": "SubagentStop",
+        "description": "Fires when a subagent completes execution."
+      },
+      {
+        "name": "TeammateIdle",
+        "description": "Fires when a teammate agent becomes idle and available for work."
+      },
+      {
+        "name": "TaskCompleted",
+        "description": "Fires when a task in the task list is marked as completed."
+      },
+      {
+        "name": "ConfigChange",
+        "description": "Fires when configuration settings are modified."
+      },
+      {
+        "name": "WorktreeCreate",
+        "description": "Fires when a git worktree is created."
+      },
+      {
+        "name": "WorktreeRemove",
+        "description": "Fires when a git worktree is removed."
+      }
+    ],
+    "execution_models": ["command", "prompt", "agent"]
+  },
+  "mcp": {
+    "supported": true,
+    "transports": ["stdio", "streamable-http"],
+    "env_prefix": null
+  },
+  "extension_model": {
+    "type": "bundle",
+    "install_dir": "~/.claude/plugins/{package}",
+    "manifest": {
+      "filename": "plugin.json",
+      "required_fields": ["name"]
+    },
+    "registration": {
+      "mechanism": "settings-entry",
+      "path": "~/.claude/settings.json"
+    },
+    "layout": {
+      "skills": "skills/{name}/SKILL.md",
+      "agents": "agents/{name}.md",
+      "commands": "commands/{name}.md",
+      "hooks": "hooks.json",
+      "mcp_servers": ".mcp.json",
+      "lsp_servers": ".lsp.json"
+    }
+  },
+  "configuration": {
+    "settings_paths": {
+      "user": "~/.claude/settings.json",
+      "project": ".claude/settings.json",
+      "managed": "~/.claude/settings.managed.json"
+    }
+  },
+  "capabilities": {
+    "lazy_loading": true,
+    "hot_reload": false,
+    "managed_settings": true
+  }
+}

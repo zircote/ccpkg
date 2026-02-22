@@ -188,30 +188,22 @@ Hosts MAY define additional event types. Hooks for unrecognized event types MUST
 
 ### Canonical Event Vocabulary
 
-The event types above use Claude Code's naming convention. ccpkg also defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](/specification/manifest#targets-object)).
+ccpkg defines a canonical (tool-neutral) event vocabulary for portable hook definitions. Authors MAY use canonical names in `hooks.json`; the installer translates them to the active host's conventions at install time via the `targets.*.hook_events` mapping (see [Targets Object](/specification/manifest#targets-object)).
 
-**Canonical event names and host mappings:**
+**Canonical event names:**
 
-| Canonical Event | Claude Code | Gemini CLI | OpenCode | Codex CLI | Copilot | Description |
-|---|---|---|---|---|---|---|
-| `pre-tool-use` | `PreToolUse` | `BeforeTool` | `tool.execute.before` | — | `preToolUse` | Before a tool invocation |
-| `post-tool-use` | `PostToolUse` | `AfterTool` | `tool.execute.after` | `AfterToolUse` | `postToolUse` | After a tool invocation completes |
-| `session-start` | `SessionStart` | `SessionStart` | `session.created` | — | `sessionStart` | When a coding session begins |
-| `session-end` | `SessionStop` | `SessionEnd` | `session.deleted` | — | `sessionEnd` | When a coding session ends |
-| `notification` | `Notification` | `Notification` | — | `notify` | — | On system alerts or notifications |
-| `error` | — | — | — | — | `errorOccurred` | On error during agent execution |
-| `pre-compact` | `PreCompact` | `PreCompress` | `experimental.session.compacting` | — | — | Before context/history compression |
-| `user-prompt-submit` | `UserPromptSubmit` | — | — | — | `userPromptSubmitted` | When user submits a prompt |
+| Canonical Event | Description |
+|---|---|
+| `pre-tool-use` | Before a tool invocation |
+| `post-tool-use` | After a tool invocation completes |
+| `session-start` | When a coding session begins |
+| `session-end` | When a coding session ends |
+| `notification` | On system alerts or notifications |
+| `error` | On error during agent execution |
+| `pre-compact` | Before context/history compression |
+| `user-prompt-submit` | When user submits a prompt |
 
-A `—` means the host has no equivalent event. The canonical vocabulary covers events supported by 3+ hosts.
-
-**Host-specific events NOT in canonical vocabulary:**
-
-- **Claude Code**: `PostToolUseFailure`, `PermissionRequest`, `Stop`, `SubagentStart`, `SubagentStop`, `TeammateIdle`, `TaskCompleted`
-- **Gemini CLI**: `BeforeAgent`, `AfterAgent`, `BeforeModel`, `AfterModel`, `BeforeToolSelection`
-- **OpenCode**: `stop`, `event`, `experimental.chat.system.transform`, `experimental.chat.messages.transform`, `config`, `auth`, `chat.message`, `chat.params`, `permission.ask`
-- **Codex CLI**: (none beyond the two listed)
-- **Copilot**: (none beyond the six listed)
+Not all hosts support all canonical events. The mapping from canonical names to host-native event names is defined in each host's [adoption specification](assistant-adoption.md#hook-event-mappings). Hosts MAY also define additional events beyond the canonical vocabulary; these are documented in the host's adoption spec.
 
 **Usage rules:**
 
@@ -345,7 +337,7 @@ Template variables use the syntax `${config.VARIABLE_NAME}`. The variable name M
 - If an optional config variable is missing and has a default, the default MUST be used.
 - If an optional config variable is missing and has no default, the template variable MUST be replaced with an empty string.
 
-### Server Deduplication
+**Server Deduplication:**
 
 When installing a package that declares an MCP server already present in the host configuration, the installer SHOULD deduplicate rather than creating a duplicate entry.
 
@@ -417,9 +409,9 @@ When `components.instructions` is an object, it declares a base file and optiona
 "instructions": {
   "base": "instructions/base.md",
   "hosts": {
-    "claude": "instructions/hosts/claude.md",
-    "copilot": "instructions/hosts/copilot.md",
-    "gemini": "instructions/hosts/gemini.md"
+    "claude-code": "instructions/hosts/claude-code.md",
+    "copilot-cli": "instructions/hosts/copilot-cli.md",
+    "gemini-cli": "instructions/hosts/gemini-cli.md"
   }
 }
 ```

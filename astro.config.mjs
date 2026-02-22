@@ -100,6 +100,17 @@ export default defineConfig({
           ],
         },
         {
+          label: "Assistants",
+          items: [
+            { label: "Overview", slug: "assistants" },
+            { label: "Claude Code", slug: "assistants/claude-code" },
+            { label: "Copilot CLI", slug: "assistants/copilot-cli" },
+            { label: "Codex CLI", slug: "assistants/codex-cli" },
+            { label: "Gemini CLI", slug: "assistants/gemini-cli" },
+            { label: "OpenCode", slug: "assistants/opencode" },
+          ],
+        },
+        {
           label: "Design",
           items: [{ label: "Rationale", slug: "design/rationale" }],
         },

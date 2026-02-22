@@ -1,0 +1,149 @@
+{
+  "$schema": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "spec_version": "2026-02-22",
+  "id": "opencode",
+  "display_name": "OpenCode",
+  "vendor": "sst",
+  "homepage": "https://opencode.ai/docs/",
+  "repository": "https://github.com/sst/opencode",
+  "cli_command": "opencode",
+  "version_detection": "opencode --version",
+  "last_updated": "2026-02-22",
+  "component_support": {
+    "skills": {
+      "level": "native",
+      "notes": "Reads .claude/skills/ for compatibility"
+    },
+    "mcp_servers": { "level": "native" },
+    "lsp_servers": {
+      "level": "native",
+      "notes": "24+ languages with auto-download"
+    },
+    "hooks": {
+      "level": "native",
+      "notes": "TypeScript plugin system, 24+ events"
+    },
+    "agents": { "level": "native" },
+    "commands": { "level": "native" },
+    "instructions": { "level": "native" }
+  },
+  "component_paths": {
+    "skills": {
+      "user": "~/.config/opencode/skills/{name}/SKILL.md",
+      "project": ".claude/skills/{name}/SKILL.md"
+    },
+    "agents": {
+      "user": "~/.config/opencode/agents/{name}.md",
+      "project": ".opencode/agents/{name}.md"
+    },
+    "commands": {
+      "user": "~/.config/opencode/commands/{name}.md",
+      "project": ".opencode/commands/{name}.md"
+    },
+    "hooks": {
+      "user": {
+        "file": "~/.config/opencode/opencode.jsonc",
+        "format": "jsonc",
+        "key": "plugins"
+      },
+      "project": {
+        "file": "opencode.jsonc",
+        "format": "jsonc",
+        "key": "plugins"
+      }
+    },
+    "mcp_servers": {
+      "user": {
+        "file": "~/.config/opencode/opencode.jsonc",
+        "format": "jsonc",
+        "key": "mcpServers"
+      },
+      "project": {
+        "file": "opencode.jsonc",
+        "format": "jsonc",
+        "key": "mcpServers"
+      }
+    },
+    "lsp_servers": {
+      "user": {
+        "file": "~/.config/opencode/opencode.jsonc",
+        "format": "jsonc",
+        "key": "lsp"
+      }
+    },
+    "instructions": {
+      "project": "AGENTS.md"
+    }
+  },
+  "instructions": {
+    "filename": "AGENTS.md",
+    "content_format": "markdown",
+    "fallbacks": ["CLAUDE.md"],
+    "paths": {
+      "project": "AGENTS.md"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "pre-tool-use": "tool.execute.before",
+      "post-tool-use": "tool.execute.after",
+      "session-start": "session.created",
+      "pre-compact": "experimental.session.compacting"
+    },
+    "host_specific_events": [
+      {
+        "name": "stop",
+        "description": "Fires when the assistant stops generating."
+      },
+      {
+        "name": "event",
+        "description": "Generic event hook for custom event handling."
+      },
+      {
+        "name": "experimental.chat.system.transform",
+        "description": "Allows transforming the system prompt before it is sent."
+      },
+      {
+        "name": "experimental.chat.messages.transform",
+        "description": "Allows transforming chat messages before they are sent."
+      },
+      {
+        "name": "config",
+        "description": "Fires during configuration loading for dynamic config."
+      },
+      { "name": "auth", "description": "Fires during authentication flow." },
+      {
+        "name": "chat.message",
+        "description": "Fires when a chat message is received."
+      },
+      {
+        "name": "chat.params",
+        "description": "Fires to allow modification of chat request parameters."
+      },
+      {
+        "name": "permission.ask",
+        "description": "Fires when the assistant requests permission for an action."
+      }
+    ],
+    "execution_models": ["typescript-plugin"]
+  },
+  "mcp": {
+    "supported": true,
+    "transports": ["stdio", "streamable-http"],
+    "env_prefix": null
+  },
+  "extension_model": {
+    "type": "scatter"
+  },
+  "configuration": {
+    "settings_paths": {
+      "user": "~/.config/opencode/opencode.jsonc",
+      "project": "opencode.jsonc"
+    }
+  },
+  "capabilities": {
+    "lazy_loading": false,
+    "hot_reload": false,
+    "managed_settings": false
+  }
+}

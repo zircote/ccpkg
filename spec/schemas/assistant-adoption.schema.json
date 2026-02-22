@@ -1,0 +1,604 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "title": "ccpkg Assistant Adoption Specification Schema",
+  "description": "Schema for assistant adoption specification files that describe how an AI coding assistant integrates with ccpkg.",
+  "type": "object",
+  "required": [
+    "$schema",
+    "spec_version",
+    "id",
+    "display_name",
+    "vendor",
+    "homepage",
+    "component_support",
+    "component_paths",
+    "instructions",
+    "hook_events",
+    "mcp"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "supportLevel": {
+      "type": "object",
+      "required": ["level"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "native",
+            "via-adapter",
+            "experimental",
+            "not-supported",
+            "deprecated"
+          ],
+          "description": "The level of support the assistant provides for this component type."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes about the support level, limitations, or requirements."
+        }
+      }
+    },
+
+    "versionedSupportLevel": {
+      "oneOf": [
+        { "$ref": "#/$defs/supportLevel" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/supportLevel"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "hostSpecificEvent": {
+      "type": "object",
+      "required": ["name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The host-specific event name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the event."
+        }
+      }
+    },
+
+    "filePaths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "type": "string",
+          "description": "Path to the user-level location for this component type."
+        },
+        "project": {
+          "type": "string",
+          "description": "Path to the project-level location for this component type."
+        }
+      }
+    },
+
+    "configEntry": {
+      "type": "object",
+      "required": ["file", "format"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path to the configuration file."
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "jsonc", "toml"],
+          "description": "The format of the configuration file."
+        },
+        "key": {
+          "type": "string",
+          "description": "The key within the configuration file where this component is registered."
+        }
+      }
+    },
+
+    "scopedConfigEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "$ref": "#/$defs/configEntry",
+          "description": "User-level configuration entry for this component type."
+        },
+        "project": {
+          "$ref": "#/$defs/configEntry",
+          "description": "Project-level configuration entry for this component type."
+        }
+      }
+    },
+
+    "componentPathEntry": {
+      "oneOf": [
+        { "$ref": "#/$defs/filePaths" },
+        { "$ref": "#/$defs/scopedConfigEntry" },
+        { "type": "null" }
+      ]
+    },
+
+    "componentPathsMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "skills": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for skill components."
+        },
+        "agents": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for agent components."
+        },
+        "commands": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for command components."
+        },
+        "hooks": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for hook components."
+        },
+        "mcp_servers": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for MCP server components."
+        },
+        "lsp_servers": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for LSP server components."
+        },
+        "instructions": {
+          "$ref": "#/$defs/componentPathEntry",
+          "description": "Path configuration for instruction components."
+        }
+      }
+    },
+
+    "hookEventsObject": {
+      "type": "object",
+      "required": ["canonical_map", "host_specific_events", "execution_models"],
+      "additionalProperties": false,
+      "properties": {
+        "canonical_map": {
+          "type": "object",
+          "description": "Maps canonical lowercase-hyphenated event names to host-native event strings.",
+          "additionalProperties": { "type": "string" }
+        },
+        "host_specific_events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hostSpecificEvent" },
+          "description": "Events specific to this assistant that do not map to canonical names."
+        },
+        "execution_models": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "command",
+              "typescript-plugin",
+              "javascript",
+              "prompt",
+              "agent"
+            ]
+          },
+          "description": "The execution models supported for hooks."
+        }
+      }
+    },
+
+    "mcpObject": {
+      "type": "object",
+      "required": ["supported", "transports"],
+      "additionalProperties": false,
+      "properties": {
+        "supported": {
+          "type": "boolean",
+          "description": "Whether the assistant supports MCP."
+        },
+        "transports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Supported MCP transport mechanisms (e.g. stdio, sse, streamable-http)."
+        },
+        "env_prefix": {
+          "type": ["string", "null"],
+          "description": "Environment variable prefix for MCP server credential injection."
+        }
+      }
+    },
+
+    "extensionModelBundle": {
+      "type": "object",
+      "required": ["type", "install_dir", "manifest", "registration", "layout"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "bundle",
+          "description": "Extension model type: bundle."
+        },
+        "install_dir": {
+          "type": "string",
+          "description": "Directory where extensions are installed."
+        },
+        "manifest": {
+          "type": "object",
+          "required": ["filename", "required_fields"],
+          "additionalProperties": false,
+          "properties": {
+            "filename": {
+              "type": "string",
+              "description": "The manifest filename for extensions."
+            },
+            "required_fields": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Fields required in the extension manifest."
+            }
+          }
+        },
+        "registration": {
+          "type": "object",
+          "required": ["mechanism", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "mechanism": {
+              "type": "string",
+              "enum": ["settings-entry", "index-file", "directory-presence"],
+              "description": "How extensions are registered with the assistant."
+            },
+            "path": {
+              "type": "string",
+              "description": "Path used for registration."
+            }
+          }
+        },
+        "layout": {
+          "type": "object",
+          "description": "Maps component names to relative paths within the extension bundle.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+
+    "extensionModelScatter": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "scatter",
+          "description": "Extension model type: scatter."
+        }
+      }
+    },
+
+    "extensionModelObject": {
+      "oneOf": [
+        { "$ref": "#/$defs/extensionModelBundle" },
+        { "$ref": "#/$defs/extensionModelScatter" }
+      ]
+    },
+
+    "instructionsObject": {
+      "type": "object",
+      "required": ["filename", "content_format"],
+      "additionalProperties": false,
+      "properties": {
+        "filename": {
+          "type": "string",
+          "description": "The filename the assistant uses for instructions (e.g. CLAUDE.md, .github/copilot-instructions.md)."
+        },
+        "content_format": {
+          "type": "string",
+          "description": "The content format expected by the assistant (e.g. markdown, yaml)."
+        },
+        "merge_strategy": {
+          "type": "string",
+          "enum": ["replace", "append", "prepend"],
+          "description": "How to merge package instructions with existing instruction files."
+        },
+        "fallbacks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Alternative filenames the assistant can fall back to."
+        },
+        "paths": {
+          "$ref": "#/$defs/filePaths",
+          "description": "File paths for instruction files at user and project level."
+        }
+      }
+    },
+
+    "roadmapEntry": {
+      "type": "object",
+      "required": ["target_version", "status", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "target_version": {
+          "type": "string",
+          "description": "The target version for this roadmap entry."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["planned", "in-progress", "beta"],
+          "description": "Current status of the roadmap entry."
+        },
+        "tracking": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for tracking progress of this roadmap item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the planned changes."
+        },
+        "changes": {
+          "type": "object",
+          "description": "Structured description of the changes planned.",
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "versionedComponentPaths": {
+      "oneOf": [
+        { "$ref": "#/$defs/componentPathsMap" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/componentPathsMap"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "versionedExtensionModel": {
+      "oneOf": [
+        { "$ref": "#/$defs/extensionModelObject" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/extensionModelObject"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "versionedHookEvents": {
+      "oneOf": [
+        { "$ref": "#/$defs/hookEventsObject" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/hookEventsObject"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "versionedMcp": {
+      "oneOf": [
+        { "$ref": "#/$defs/mcpObject" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/mcpObject"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "versionedInstructions": {
+      "oneOf": [
+        { "$ref": "#/$defs/instructionsObject" },
+        {
+          "type": "object",
+          "patternProperties": {
+            "^([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?)(\\s*\\|\\|\\s*([<>=!~^]*\\d+\\.\\d+\\.\\d+([- +].+)?))*$": {
+              "$ref": "#/$defs/instructionsObject"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+      "description": "Reference to this schema."
+    },
+    "spec_version": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "The ccpkg specification version this adoption spec conforms to. Date format YYYY-MM-DD."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Unique identifier for the assistant. Hyphenated lowercase slug (e.g. claude-code, copilot-cli)."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable display name for the assistant."
+    },
+    "vendor": {
+      "type": "string",
+      "description": "The vendor or organization that produces the assistant."
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the assistant's homepage or documentation site."
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the assistant's source code repository."
+    },
+    "cli_command": {
+      "type": "string",
+      "description": "The CLI command used to invoke the assistant (e.g. claude, gemini)."
+    },
+    "version_detection": {
+      "type": "string",
+      "description": "Shell command to detect the installed version of the assistant (e.g. claude --version)."
+    },
+    "min_version": {
+      "type": "string",
+      "description": "Minimum supported version of the assistant."
+    },
+    "variant_of": {
+      "type": "string",
+      "description": "For variant specs, the ID of the base assistant spec this is derived from."
+    },
+    "last_updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date when this adoption spec was last updated. Format YYYY-MM-DD."
+    },
+    "component_support": {
+      "type": "object",
+      "description": "Declares the assistant's support level for each ccpkg component type. Each entry can be a direct support level or a version-range-keyed object.",
+      "required": [
+        "skills",
+        "mcp_servers",
+        "lsp_servers",
+        "hooks",
+        "agents",
+        "commands",
+        "instructions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skills": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for skill components."
+        },
+        "mcp_servers": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for MCP server components."
+        },
+        "lsp_servers": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for LSP server components."
+        },
+        "hooks": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for hook components."
+        },
+        "agents": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for agent components."
+        },
+        "commands": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for command components."
+        },
+        "instructions": {
+          "$ref": "#/$defs/versionedSupportLevel",
+          "description": "Support level for instruction components."
+        }
+      }
+    },
+    "component_paths": {
+      "$ref": "#/$defs/versionedComponentPaths",
+      "description": "Declares where each component type is stored. Can be a direct map or version-range-keyed."
+    },
+    "instructions": {
+      "$ref": "#/$defs/versionedInstructions",
+      "description": "Describes how the assistant handles instruction files. Can be version-range-keyed."
+    },
+    "hook_events": {
+      "$ref": "#/$defs/versionedHookEvents",
+      "description": "Describes the assistant's hook event model. Can be version-range-keyed."
+    },
+    "mcp": {
+      "$ref": "#/$defs/versionedMcp",
+      "description": "Describes the assistant's MCP (Model Context Protocol) support. Can be version-range-keyed."
+    },
+    "extension_model": {
+      "$ref": "#/$defs/versionedExtensionModel",
+      "description": "Describes the assistant's extension/plugin model. Can be version-range-keyed."
+    },
+    "configuration": {
+      "type": "object",
+      "description": "Describes the assistant's configuration file locations.",
+      "additionalProperties": false,
+      "properties": {
+        "settings_paths": {
+          "type": "object",
+          "description": "Paths to settings files at different scopes.",
+          "additionalProperties": false,
+          "properties": {
+            "user": {
+              "type": "string",
+              "description": "Path to user-level settings."
+            },
+            "project": {
+              "type": "string",
+              "description": "Path to project-level settings."
+            },
+            "managed": {
+              "type": "string",
+              "description": "Path to managed/system-level settings."
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Optional capability flags for the assistant.",
+      "additionalProperties": false,
+      "properties": {
+        "lazy_loading": {
+          "type": "boolean",
+          "description": "Whether the assistant supports lazy loading of components."
+        },
+        "hot_reload": {
+          "type": "boolean",
+          "description": "Whether the assistant supports hot reloading of configuration."
+        },
+        "managed_settings": {
+          "type": "boolean",
+          "description": "Whether the assistant supports managed settings."
+        }
+      }
+    },
+    "roadmap": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/roadmapEntry" },
+      "description": "Planned future changes to the assistant's ccpkg support."
+    }
+  }
+}

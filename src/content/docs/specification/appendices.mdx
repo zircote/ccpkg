@@ -40,7 +40,7 @@ The following package names are reserved and MUST NOT be used by third-party pac
 
 # Appendix D: Future Host Integration Targets
 
-The following features are **not currently implementable** without changes to the host application (Claude Code). They are documented here as aspirational targets to guide future host development. ccpkg implementations MUST NOT depend on these features and MUST NOT claim to provide them.
+The following features are **not currently implementable** without changes to host applications. They are documented here as aspirational targets to guide future host development. ccpkg implementations MUST NOT depend on these features and MUST NOT claim to provide them.
 
 ## D.1 Hot-Reload After Install
 
@@ -48,7 +48,7 @@ The following features are **not currently implementable** without changes to th
 
 **Requires:** A host API or file-watch mechanism to detect new plugins mid-session and load them into the running context.
 
-**Current behavior:** The host reads `installed_plugins.json` and scans plugin directories at session startup only. Changes to plugin registration take effect on the next session start. The installer informs the user that a restart is required.
+**Current behavior:** Hosts typically discover plugins by scanning plugin directories at session startup only. Changes to plugin registration take effect on the next session start. The installer informs the user that a restart is required.
 
 ## D.2 Host-Aware Lockfile Loading
 
@@ -56,7 +56,7 @@ The following features are **not currently implementable** without changes to th
 
 **Requires:** The host application to understand the ccpkg lockfile format and use it as a package index.
 
-**Current behavior:** The host discovers packages via `extraKnownMarketplaces` and standard plugin directory scanning. The ccpkg lockfile is used only by the ccpkg installer for lifecycle management (install, update, uninstall), not by the host.
+**Current behavior:** Hosts discover packages via their native plugin discovery mechanisms (directory scanning, marketplace registration, etc.). The ccpkg lockfile is used only by the ccpkg installer for lifecycle management (install, update, uninstall), not by the host.
 
 ## D.3 Runtime Component State Machine
 

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "spec_version": "2026-02-22",
+  "id": "copilot-cli",
+  "display_name": "GitHub Copilot CLI",
+  "vendor": "GitHub",
+  "homepage": "https://docs.github.com/en/copilot",
+  "repository": "https://github.com/github/copilot-cli",
+  "cli_command": "copilot",
+  "version_detection": "copilot --version",
+  "last_updated": "2026-02-22",
+  "component_support": {
+    "skills": { "level": "native" },
+    "mcp_servers": { "level": "native" },
+    "lsp_servers": { "level": "native" },
+    "hooks": { "level": "native", "notes": "6 events" },
+    "agents": { "level": "native", "notes": ".github/agents/ directory" },
+    "commands": { "level": "not-supported" },
+    "instructions": { "level": "native" }
+  },
+  "component_paths": {
+    "skills": {
+      "user": "~/.copilot/skills/{name}/SKILL.md",
+      "project": ".github/skills/{name}/SKILL.md"
+    },
+    "agents": {
+      "project": ".github/agents/{name}.agent.md"
+    },
+    "commands": null,
+    "hooks": {
+      "user": {
+        "file": "~/.copilot/hooks.json",
+        "format": "json",
+        "key": "hooks"
+      },
+      "project": {
+        "file": ".github/copilot-hooks.json",
+        "format": "json",
+        "key": "hooks"
+      }
+    },
+    "mcp_servers": {
+      "user": {
+        "file": "~/.copilot/mcp-config.json",
+        "format": "json",
+        "key": "mcpServers"
+      },
+      "project": {
+        "file": ".github/copilot-mcp.json",
+        "format": "json",
+        "key": "mcpServers"
+      }
+    },
+    "lsp_servers": {
+      "user": {
+        "file": "~/.copilot/settings.json",
+        "format": "json",
+        "key": "lspServers"
+      }
+    },
+    "instructions": {
+      "project": ".github/copilot-instructions.md"
+    }
+  },
+  "instructions": {
+    "filename": ".github/copilot-instructions.md",
+    "content_format": "markdown",
+    "paths": {
+      "project": ".github/copilot-instructions.md"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "pre-tool-use": "preToolUse",
+      "post-tool-use": "postToolUse",
+      "session-start": "sessionStart",
+      "session-end": "sessionEnd",
+      "user-prompt-submit": "userPromptSubmitted",
+      "error": "errorOccurred"
+    },
+    "host_specific_events": [],
+    "execution_models": ["command"]
+  },
+  "mcp": {
+    "supported": true,
+    "transports": ["stdio"],
+    "env_prefix": null
+  },
+  "extension_model": {
+    "type": "bundle",
+    "install_dir": "~/.copilot/installed-plugins/_direct/{package}",
+    "manifest": {
+      "filename": "plugin.json",
+      "required_fields": ["name"]
+    },
+    "registration": {
+      "mechanism": "index-file",
+      "path": "~/.copilot/plugin-index.json"
+    },
+    "layout": {
+      "skills": "skills/{name}/SKILL.md",
+      "agents": "agents/{name}.agent.md",
+      "hooks": "hooks.json",
+      "mcp_servers": ".mcp.json",
+      "lsp_servers": ".lsp.json"
+    }
+  }
+}

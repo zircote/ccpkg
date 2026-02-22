@@ -1,0 +1,141 @@
+{
+  "$schema": "https://ccpkg.dev/schemas/assistant-adoption.schema.json",
+  "spec_version": "2026-02-22",
+  "id": "gemini-cli",
+  "display_name": "Gemini CLI",
+  "vendor": "Google",
+  "homepage": "https://geminicli.com/docs/",
+  "repository": "https://github.com/google-gemini/gemini-cli",
+  "cli_command": "gemini",
+  "version_detection": "gemini --version",
+  "last_updated": "2026-02-22",
+  "component_support": {
+    "skills": { "level": "native" },
+    "mcp_servers": { "level": "native" },
+    "lsp_servers": { "level": "experimental", "notes": "TS/JS only" },
+    "hooks": { "level": "native", "notes": "11 events" },
+    "agents": { "level": "experimental", "notes": ".gemini/agents/ directory" },
+    "commands": {
+      "level": "native",
+      "notes": "TOML format at .gemini/commands/"
+    },
+    "instructions": { "level": "native" }
+  },
+  "component_paths": {
+    "skills": {
+      "user": "~/.gemini/skills/{name}/SKILL.md",
+      "project": ".gemini/skills/{name}/SKILL.md"
+    },
+    "agents": {
+      "project": ".gemini/agents/{name}.md"
+    },
+    "commands": {
+      "project": ".gemini/commands/{name}.toml"
+    },
+    "hooks": {
+      "user": {
+        "file": "~/.gemini/settings.json",
+        "format": "json",
+        "key": "hooks"
+      },
+      "project": {
+        "file": ".gemini/settings.json",
+        "format": "json",
+        "key": "hooks"
+      }
+    },
+    "mcp_servers": {
+      "user": {
+        "file": "~/.gemini/settings.json",
+        "format": "json",
+        "key": "mcpServers"
+      },
+      "project": {
+        "file": ".gemini/settings.json",
+        "format": "json",
+        "key": "mcpServers"
+      }
+    },
+    "lsp_servers": {
+      "user": {
+        "file": "~/.gemini/settings.json",
+        "format": "json",
+        "key": "lspServers"
+      }
+    },
+    "instructions": {
+      "user": "~/.gemini/GEMINI.md",
+      "project": "GEMINI.md"
+    }
+  },
+  "instructions": {
+    "filename": "GEMINI.md",
+    "content_format": "markdown",
+    "paths": {
+      "user": "~/.gemini/GEMINI.md",
+      "project": "GEMINI.md"
+    }
+  },
+  "hook_events": {
+    "canonical_map": {
+      "pre-tool-use": "BeforeTool",
+      "post-tool-use": "AfterTool",
+      "session-start": "SessionStart",
+      "session-end": "SessionEnd",
+      "notification": "Notification",
+      "pre-compact": "PreCompress"
+    },
+    "host_specific_events": [
+      {
+        "name": "BeforeAgent",
+        "description": "Fires before an agent is invoked."
+      },
+      {
+        "name": "AfterAgent",
+        "description": "Fires after an agent completes execution."
+      },
+      {
+        "name": "BeforeModel",
+        "description": "Fires before a model request is sent."
+      },
+      {
+        "name": "AfterModel",
+        "description": "Fires after a model response is received."
+      },
+      {
+        "name": "BeforeToolSelection",
+        "description": "Fires before the tool selection step."
+      }
+    ],
+    "execution_models": ["command"]
+  },
+  "mcp": {
+    "supported": true,
+    "transports": ["stdio", "sse", "http-streaming"],
+    "env_prefix": null
+  },
+  "extension_model": {
+    "type": "bundle",
+    "install_dir": "~/.gemini/extensions/{package}",
+    "manifest": {
+      "filename": "gemini-extension.json",
+      "required_fields": ["name"]
+    },
+    "registration": {
+      "mechanism": "directory-presence",
+      "path": "~/.gemini/extensions/"
+    },
+    "layout": {
+      "skills": "skills/{name}/SKILL.md",
+      "agents": "agents/{name}.md",
+      "commands": "commands/{name}.toml",
+      "hooks": "hooks.json",
+      "mcp_servers": ".mcp.json"
+    }
+  },
+  "capabilities": {
+    "lazy_loading": false,
+    "hot_reload": false,
+    "managed_settings": false
+  }
+}

@@ -69,7 +69,7 @@ Each component field that accepts an array (`skills`, `agents`, `commands`) supp
       "skills/universal-skill",
       {
         "path": "skills/claude-specific-skill",
-        "hosts": ["claude"]
+        "hosts": ["claude-code"]
       }
     ],
     "hooks": "hooks/hooks.json",
@@ -77,7 +77,7 @@ Each component field that accepts an array (`skills`, `agents`, `commands`) supp
       "agents/universal-agent",
       {
         "path": "agents/copilot-agent",
-        "hosts": ["copilot"]
+        "hosts": ["copilot-cli"]
       }
     ]
   }
@@ -120,13 +120,13 @@ The `compatibility` object declares version constraints for host tools. Each key
 ```json
 {
   "compatibility": {
-    "claude_code": ">=1.0.0",
-    "codex_cli": ">=0.5.0"
+    "host-a": ">=1.0.0",
+    "host-b": ">=0.5.0"
   }
 }
 ```
 
-Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
+Keys are host identifiers as defined in individual [adoption specifications](assistant-adoption.md). Installers SHOULD warn the user if the host does not satisfy the declared compatibility constraint. Installers MUST NOT refuse installation solely based on an unrecognized tool identifier.
 
 ## Targets Object
 
@@ -138,66 +138,25 @@ The following standard fields are defined. Tool-specific adapters MAY define add
 |---|---|---|
 | `instructions_file` | `string` | OPTIONAL. Filename to which assembled instructions are written for this host. |
 | `hook_events` | `object` | OPTIONAL. Maps canonical event names (lowercase-hyphenated keys) to host-native event name strings. |
-| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection (e.g., Copilot uses `COPILOT_MCP_`). |
+| `mcp_env_prefix` | `string` | OPTIONAL. Environment variable prefix for MCP server credential injection. See the host's adoption specification for the specific prefix. |
 
 ```json
 {
   "targets": {
-    "claude": {
-      "instructions_file": "CLAUDE.md",
+    "<host-id>": {
+      "instructions_file": "HOST-INSTRUCTIONS.md",
       "hook_events": {
-        "pre-tool-use": "PreToolUse",
-        "post-tool-use": "PostToolUse",
-        "session-start": "SessionStart",
-        "session-end": "SessionStop",
-        "notification": "Notification",
-        "pre-compact": "PreCompact",
-        "user-prompt-submit": "UserPromptSubmit"
-      }
-    },
-    "codex": {
-      "instructions_file": "AGENTS.md",
-      "hook_events": {
-        "post-tool-use": "AfterToolUse",
-        "notification": "notify"
-      }
-    },
-    "copilot": {
-      "instructions_file": ".github/copilot-instructions.md",
-      "mcp_env_prefix": "COPILOT_MCP_",
-      "hook_events": {
-        "pre-tool-use": "preToolUse",
-        "post-tool-use": "postToolUse",
-        "session-start": "sessionStart",
-        "session-end": "sessionEnd",
-        "user-prompt-submit": "userPromptSubmitted",
-        "error": "errorOccurred"
-      }
-    },
-    "gemini": {
-      "instructions_file": "GEMINI.md",
-      "hook_events": {
-        "pre-tool-use": "BeforeTool",
-        "post-tool-use": "AfterTool",
-        "session-start": "SessionStart",
-        "session-end": "SessionEnd",
-        "notification": "Notification",
-        "pre-compact": "PreCompress"
-      }
-    },
-    "opencode": {
-      "instructions_file": "AGENTS.md",
-      "hook_events": {
-        "pre-tool-use": "tool.execute.before",
-        "post-tool-use": "tool.execute.after",
-        "pre-compact": "experimental.session.compacting"
-      }
+        "pre-tool-use": "HostPreToolEvent",
+        "post-tool-use": "HostPostToolEvent",
+        "session-start": "HostSessionStart"
+      },
+      "mcp_env_prefix": "HOST_MCP_"
     }
   }
 }
 ```
 
-Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode uses TypeScript plugin hooks rather than shell-based hooks, so only the closest equivalents are mapped. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host.
+Each key is a host identifier matching an [adoption specification](assistant-adoption.md). The `hook_events` mapping translates canonical event names to host-native event names; the `instructions_file` declares the filename to which assembled instructions are written. Missing canonical events in a host's `hook_events` mean the host has no equivalent — hooks using those canonical names are silently skipped on that host. See individual adoption specs for the complete event mappings, instruction filenames, and MCP prefixes for each host.
 
 ## Example Manifest
 
@@ -227,8 +186,8 @@ Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode 
     "instructions": {
       "base": "instructions/base.md",
       "hosts": {
-        "claude": "instructions/hosts/claude.md",
-        "copilot": "instructions/hosts/copilot.md"
+        "claude-code": "instructions/hosts/claude-code.md",
+        "copilot-cli": "instructions/hosts/copilot-cli.md"
       }
     }
   },
@@ -251,13 +210,13 @@ Codex CLI has minimal hook support (only `AfterToolUse` and `notify`). OpenCode 
     }
   },
   "compatibility": {
-    "claude_code": ">=1.0.0"
+    "claude-code": ">=1.0.0"
   },
   "targets": {
-    "claude": {
+    "claude-code": {
       "instructions_file": "CLAUDE.md"
     },
-    "codex": {
+    "codex-cli": {
       "instructions_file": "AGENTS.md"
     }
   },

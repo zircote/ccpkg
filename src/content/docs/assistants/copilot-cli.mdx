@@ -1,0 +1,105 @@
+---
+title: "GitHub Copilot CLI"
+description: "ccpkg adoption specification for GitHub Copilot CLI by GitHub."
+---
+
+# GitHub Copilot CLI
+
+**Vendor:** GitHub | **Homepage:** [https://docs.github.com/en/copilot](https://docs.github.com/en/copilot) | **CLI Command:** `copilot` | **Version Detection:** `copilot --version`
+
+## Component Support
+
+| Component | Support Level | Notes |
+|---|---|---|
+| Skills | Native |  |
+| MCP Servers | Native |  |
+| LSP Servers | Native |  |
+| Hooks | Native | 6 events |
+| Agents | Native | .github/agents/ directory |
+| Commands | Not Supported |  |
+| Instructions | Native |  |
+
+## Component Paths
+
+### File-Based Component Paths
+
+| Component | Scope | Path |
+|---|---|---|
+| Skills | user | `~/.copilot/skills/{name}/SKILL.md` |
+| Skills | project | `.github/skills/{name}/SKILL.md` |
+| Agents | project | `.github/agents/{name}.agent.md` |
+| Commands | — | Not supported |
+| Instructions | project | `.github/copilot-instructions.md` |
+
+### Config-Entry Component Paths
+
+| Component | Scope | File | Format | Key |
+|---|---|---|---|---|
+| Hooks | user | `~/.copilot/hooks.json` | json | `hooks` |
+| Hooks | project | `.github/copilot-hooks.json` | json | `hooks` |
+| MCP Servers | user | `~/.copilot/mcp-config.json` | json | `mcpServers` |
+| MCP Servers | project | `.github/copilot-mcp.json` | json | `mcpServers` |
+| LSP Servers | user | `~/.copilot/settings.json` | json | `lspServers` |
+
+
+## Instructions
+
+| Property | Value |
+|---|---|
+| Filename | `.github/copilot-instructions.md` |
+| Content Format | markdown |
+
+### Instruction Paths
+
+| Scope | Path |
+|---|---|
+| project | `.github/copilot-instructions.md` |
+
+## Extension Model
+
+**Type:** Bundle
+
+| Property | Value |
+|---|---|
+| Install Directory | `~/.copilot/installed-plugins/_direct/{package}` |
+| Manifest | `plugin.json` (required: name) |
+| Registration | index-file — `~/.copilot/plugin-index.json` |
+
+**Layout:**
+
+| Component | Path |
+|---|---|
+| skills | `skills/{name}/SKILL.md` |
+| agents | `agents/{name}.agent.md` |
+| hooks | `hooks.json` |
+| mcp_servers | `.mcp.json` |
+| lsp_servers | `.lsp.json` |
+
+## Hook Events
+
+### Canonical Event Mapping
+
+| Canonical Event | Host Event |
+|---|---|
+| `pre-tool-use` | `preToolUse` |
+| `post-tool-use` | `postToolUse` |
+| `session-start` | `sessionStart` |
+| `session-end` | `sessionEnd` |
+| `user-prompt-submit` | `userPromptSubmitted` |
+| `error` | `errorOccurred` |
+
+### Host-Specific Events
+
+None
+
+### Execution Model
+
+command
+
+## MCP Integration
+
+| Property | Value |
+|---|---|
+| Supported | true |
+| Transports | stdio |
+| Env Prefix | None |

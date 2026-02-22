@@ -1,0 +1,113 @@
+---
+title: "OpenCode"
+description: "ccpkg adoption specification for OpenCode by sst."
+---
+
+# OpenCode
+
+**Vendor:** sst | **Homepage:** [https://opencode.ai/docs/](https://opencode.ai/docs/) | **CLI Command:** `opencode` | **Version Detection:** `opencode --version`
+
+## Component Support
+
+| Component | Support Level | Notes |
+|---|---|---|
+| Skills | Native | Reads .claude/skills/ for compatibility |
+| MCP Servers | Native |  |
+| LSP Servers | Native | 24+ languages with auto-download |
+| Hooks | Native | TypeScript plugin system, 24+ events |
+| Agents | Native |  |
+| Commands | Native |  |
+| Instructions | Native |  |
+
+## Component Paths
+
+### File-Based Component Paths
+
+| Component | Scope | Path |
+|---|---|---|
+| Skills | user | `~/.config/opencode/skills/{name}/SKILL.md` |
+| Skills | project | `.claude/skills/{name}/SKILL.md` |
+| Agents | user | `~/.config/opencode/agents/{name}.md` |
+| Agents | project | `.opencode/agents/{name}.md` |
+| Commands | user | `~/.config/opencode/commands/{name}.md` |
+| Commands | project | `.opencode/commands/{name}.md` |
+| Instructions | project | `AGENTS.md` |
+
+### Config-Entry Component Paths
+
+| Component | Scope | File | Format | Key |
+|---|---|---|---|---|
+| Hooks | user | `~/.config/opencode/opencode.jsonc` | jsonc | `plugins` |
+| Hooks | project | `opencode.jsonc` | jsonc | `plugins` |
+| MCP Servers | user | `~/.config/opencode/opencode.jsonc` | jsonc | `mcpServers` |
+| MCP Servers | project | `opencode.jsonc` | jsonc | `mcpServers` |
+| LSP Servers | user | `~/.config/opencode/opencode.jsonc` | jsonc | `lsp` |
+
+
+## Instructions
+
+| Property | Value |
+|---|---|
+| Filename | `AGENTS.md` |
+| Content Format | markdown |
+| Fallbacks | CLAUDE.md |
+
+### Instruction Paths
+
+| Scope | Path |
+|---|---|
+| project | `AGENTS.md` |
+
+## Extension Model
+
+**Scatter** — components installed to individual paths defined in Component Paths.
+
+## Hook Events
+
+### Canonical Event Mapping
+
+| Canonical Event | Host Event |
+|---|---|
+| `pre-tool-use` | `tool.execute.before` |
+| `post-tool-use` | `tool.execute.after` |
+| `session-start` | `session.created` |
+| `pre-compact` | `experimental.session.compacting` |
+
+### Host-Specific Events
+
+- **stop** — Fires when the assistant stops generating.
+- **event** — Generic event hook for custom event handling.
+- **experimental.chat.system.transform** — Allows transforming the system prompt before it is sent.
+- **experimental.chat.messages.transform** — Allows transforming chat messages before they are sent.
+- **config** — Fires during configuration loading for dynamic config.
+- **auth** — Fires during authentication flow.
+- **chat.message** — Fires when a chat message is received.
+- **chat.params** — Fires to allow modification of chat request parameters.
+- **permission.ask** — Fires when the assistant requests permission for an action.
+
+### Execution Model
+
+typescript-plugin
+
+## MCP Integration
+
+| Property | Value |
+|---|---|
+| Supported | true |
+| Transports | stdio, streamable-http |
+| Env Prefix | None |
+
+## Configuration
+
+| Scope | Path |
+|---|---|
+| user | `~/.config/opencode/opencode.jsonc` |
+| project | `opencode.jsonc` |
+
+## Capabilities
+
+| Capability | Supported |
+|---|---|
+| Lazy Loading | false |
+| Hot Reload | false |
+| Managed Settings | false |

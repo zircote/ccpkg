@@ -1,0 +1,138 @@
+---
+title: "Claude Code"
+description: "ccpkg adoption specification for Claude Code by Anthropic."
+---
+
+# Claude Code
+
+**Vendor:** Anthropic | **Homepage:** [https://code.claude.com/docs/](https://code.claude.com/docs/) | **CLI Command:** `claude` | **Version Detection:** `claude --version`
+
+## Component Support
+
+| Component | Support Level | Notes |
+|---|---|---|
+| Skills | Native |  |
+| MCP Servers | Native |  |
+| LSP Servers | Native | Via plugin system |
+| Hooks | Native | 17 events, 3 execution models |
+| Agents | Native |  |
+| Commands | Native |  |
+| Instructions | Native |  |
+
+## Component Paths
+
+### File-Based Component Paths
+
+| Component | Scope | Path |
+|---|---|---|
+| Skills | user | `~/.claude/skills/{name}/SKILL.md` |
+| Skills | project | `.claude/skills/{name}/SKILL.md` |
+| Agents | user | `~/.claude/agents/{name}.md` |
+| Agents | project | `.claude/agents/{name}.md` |
+| Commands | user | `~/.claude/commands/{name}.md` |
+| Commands | project | `.claude/commands/{name}.md` |
+| Instructions | user | `~/.claude/CLAUDE.md` |
+| Instructions | project | `CLAUDE.md` |
+
+### Config-Entry Component Paths
+
+| Component | Scope | File | Format | Key |
+|---|---|---|---|---|
+| Hooks | user | `~/.claude/settings.json` | json | `hooks` |
+| Hooks | project | `.claude/settings.json` | json | `hooks` |
+| MCP Servers | user | `~/.claude.json` | json | `mcpServers` |
+| MCP Servers | project | `.mcp.json` | json | `mcpServers` |
+| LSP Servers | user | `~/.claude/settings.json` | json | `lspServers` |
+| LSP Servers | project | `.claude/settings.json` | json | `lspServers` |
+
+
+## Instructions
+
+| Property | Value |
+|---|---|
+| Filename | `CLAUDE.md` |
+| Content Format | markdown |
+| Merge Strategy | append |
+
+### Instruction Paths
+
+| Scope | Path |
+|---|---|
+| user | `~/.claude/CLAUDE.md` |
+| project | `CLAUDE.md` |
+
+## Extension Model
+
+**Type:** Bundle
+
+| Property | Value |
+|---|---|
+| Install Directory | `~/.claude/plugins/{package}` |
+| Manifest | `plugin.json` (required: name) |
+| Registration | settings-entry — `~/.claude/settings.json` |
+
+**Layout:**
+
+| Component | Path |
+|---|---|
+| skills | `skills/{name}/SKILL.md` |
+| agents | `agents/{name}.md` |
+| commands | `commands/{name}.md` |
+| hooks | `hooks.json` |
+| mcp_servers | `.mcp.json` |
+| lsp_servers | `.lsp.json` |
+
+## Hook Events
+
+### Canonical Event Mapping
+
+| Canonical Event | Host Event |
+|---|---|
+| `pre-tool-use` | `PreToolUse` |
+| `post-tool-use` | `PostToolUse` |
+| `session-start` | `SessionStart` |
+| `session-end` | `SessionStop` |
+| `notification` | `Notification` |
+| `pre-compact` | `PreCompact` |
+| `user-prompt-submit` | `UserPromptSubmit` |
+
+### Host-Specific Events
+
+- **PostToolUseFailure** — Fires when a tool invocation fails or returns an error.
+- **PermissionRequest** — Fires when the assistant requests user permission for a tool action.
+- **Stop** — Fires when the assistant stops generating a response.
+- **SubagentStart** — Fires when a subagent is spawned.
+- **SubagentStop** — Fires when a subagent completes execution.
+- **TeammateIdle** — Fires when a teammate agent becomes idle and available for work.
+- **TaskCompleted** — Fires when a task in the task list is marked as completed.
+- **ConfigChange** — Fires when configuration settings are modified.
+- **WorktreeCreate** — Fires when a git worktree is created.
+- **WorktreeRemove** — Fires when a git worktree is removed.
+
+### Execution Model
+
+command, prompt, agent
+
+## MCP Integration
+
+| Property | Value |
+|---|---|
+| Supported | true |
+| Transports | stdio, streamable-http |
+| Env Prefix | None |
+
+## Configuration
+
+| Scope | Path |
+|---|---|
+| user | `~/.claude/settings.json` |
+| project | `.claude/settings.json` |
+| managed | `~/.claude/settings.managed.json` |
+
+## Capabilities
+
+| Capability | Supported |
+|---|---|
+| Lazy Loading | true |
+| Hot Reload | false |
+| Managed Settings | true |

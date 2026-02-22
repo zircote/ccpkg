@@ -7,7 +7,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "generate:spec": "node scripts/generate-spec-pages.mjs",
-    "check:spec": "node scripts/check-spec-freshness.mjs"
+    "check:spec": "node scripts/check-spec-freshness.mjs",
+    "generate:assistants": "node scripts/generate-assistant-pages.mjs"
   },
   "dependencies": {
     "astro": "^5.17.2",

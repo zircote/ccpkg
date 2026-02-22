@@ -26,8 +26,8 @@ sequenceDiagram
     Installer->>Installer: Extract archive to install location
     Installer->>Installer: Render templates + dedup MCP
     Installer->>Installer: Store config values in host settings
-    Installer->>Installer: Generate .claude-plugin/plugin.json
-    Installer->>Host: Add to enabledPlugins in settings.json
+    Installer->>Installer: Generate host plugin manifest
+    Installer->>Host: Register package with host
     Installer->>Installer: Update lockfile
     Installer->>User: Installation complete. Restart session to activate.
 ```
@@ -61,7 +61,7 @@ sequenceDiagram
 
 10. **Render templates and deduplicate MCP servers.** The installer processes `.mcp.json` and `.lsp.json` templates, replacing `${config.VARIABLE_NAME}` markers with resolved values. For MCP servers, the installer SHOULD check for duplicates before writing:
 
-    a. For each server entry, compute its identity tuple (key_name, origin) as defined in Server Deduplication (see [Component Types](/specification/component-types/)).
+    a. For each server entry, compute its identity tuple (key_name, origin) as defined in Server Deduplication (see [Component Types](#component-types)).
 
     b. If no matching entry exists in `shared_mcp_servers`: render the template, merge into the host config, and add the server to `shared_mcp_servers` with `declared_by` set to the current package.
 
@@ -83,9 +83,9 @@ sequenceDiagram
 
 11. **Store config.** Config values are persisted in the host's settings file under `packages.{name}`.
 
-12. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the install directory from the ccpkg manifest metadata. See [Plugin Registration](/specification/install-lifecycle#plugin-registration) for the field mapping.
+12. **Generate host plugin manifest.** The installer generates the host's expected plugin manifest inside the install directory from the ccpkg manifest metadata. The manifest path and format are defined in the host's adoption specification. See [Plugin Registration](/specification/install-lifecycle#plugin-registration) for details.
 
-13. **Register with host.** The installer adds `{name}@ccpkg` to the `enabledPlugins` object in the host's settings file (`settings.json`). This registers the package as an enabled plugin for the host to discover on next session start.
+13. **Register with host.** The installer registers the package with the host's extension system using the adapter operations defined in the host's [adoption specification](assistant-adoption.md). This ensures the host discovers the package on next session start.
 
 14. **Update lockfile.** The installer writes or updates `ccpkg-lock.json` at the scope root (e.g., `~/.ccpkg/ccpkg-lock.json` for user scope). See [Lockfile Format](/specification/lockfile#lockfile-format).
 
@@ -95,18 +95,18 @@ sequenceDiagram
 
 Uninstalling a package reverses the install process:
 
-1. Remove the package directory from the install location.
-2. Remove or reassign MCP servers. For each MCP server the package declared:
+1. **Remove the package directory** from the install location (`~/.ccpkg/plugins/{name}/` or `{project-root}/.ccpkg/plugins/{name}/`).
+2. **Deregister from host.** Remove the package registration from the host's settings using the adapter operations defined in the host's adoption specification.
+3. **Remove or reassign MCP servers.** For each MCP server the package declared:
 
    a. If this package is the only entry in the server's `declared_by` list: remove the server from the host config and from `shared_mcp_servers`.
 
    b. If other packages remain in `declared_by`: remove this package from the list. If this package was the `active_source`, select the remaining package with the highest version, re-materialize its MCP template, re-render with that package's config values, and update `active_source`. For archive-backed packages, re-extract from the archive cache. For linked packages (`source: link:...`), read the template directly from the linked directory. If this package was not the active source, no config change is needed.
 
    c. If the server has `dedup: false`: remove only this package's copy. Other packages' copies are independent and unaffected.
-
-3. Remove the package entry from the lockfile.
-4. Remove config values from host settings (except secrets, which SHOULD require explicit confirmation).
-5. Deregister components from the host.
+4. **Remove lockfile entry.** Remove the package entry from `ccpkg-lock.json`.
+5. **Remove config values.** Remove config values from host settings. Secrets SHOULD require explicit user confirmation before removal.
+6. **Notify user.** Inform the user that a session restart is required to fully deactivate the package's components.
 
 ## Update
 
@@ -130,86 +130,62 @@ Installers SHOULD support a dev mode that creates a symbolic link from the plugi
 
 1. **Validate source.** The installer validates that the target directory contains a valid `manifest.json`.
 2. **Collect config values.** The installer prompts for any required config values, same as a normal install.
-3. **Generate plugin manifest.** The installer generates `.claude-plugin/plugin.json` inside the source directory from the manifest metadata (same mapping as install step 12).
+3. **Generate host plugin manifest.** The installer generates the host's expected plugin manifest inside the source directory from the manifest metadata (same mapping as install step 12).
 4. **Create symlink.** A symbolic link is created at `~/.ccpkg/plugins/{name}` pointing to the source directory.
-5. **Register with host.** The installer adds `{name}@ccpkg` to `enabledPlugins` in the host's settings, renders templates, and stores config values.
-6. **Update lockfile.** The lockfile records the package with `"source": "link:{absolute-path}"`, `"linked": true`, and `"generated_plugin_json": true` (if the `.claude-plugin/plugin.json` was created by ccpkg rather than pre-existing).
+5. **Register with host.** The installer registers the package with the host using the adapter operations defined in the host's adoption specification, renders templates, and stores config values.
+6. **Update lockfile.** The lockfile records the package with `"source": "link:{absolute-path}"`, `"linked": true`, and `"generated_plugin_manifest": true` (if the host plugin manifest was created by ccpkg rather than pre-existing).
 
 ### Unlink
 
 1. **Remove symlink.** Remove the symlink from `~/.ccpkg/plugins/{name}`.
-2. **Clean up generated files.** If the lockfile entry has `"generated_plugin_json": true`, remove the `.claude-plugin/` directory from the source directory. If the plugin.json was pre-existing (not generated by ccpkg), leave it in place.
-3. **Deregister from host.** Remove `{name}@ccpkg` from `enabledPlugins` and remove the lockfile entry.
+2. **Clean up generated files.** If the lockfile entry has `"generated_plugin_manifest": true`, remove the host plugin manifest directory from the source directory. If the manifest was pre-existing (not generated by ccpkg), leave it in place.
+3. **Deregister from host.** Remove the package registration from the host's settings and remove the lockfile entry.
 4. **Preserve source.** The source directory itself MUST NOT be deleted.
 
 Linked packages MUST be distinguishable from installed archives in listings and status output.
 
 ### Session-Only Testing
 
-For quick one-off testing without any persistent side effects, developers can use the host's `--plugin-dir` CLI flag (e.g., `claude --plugin-dir ~/Projects/my-plugin`). This loads the plugin for a single session only — no symlinks, no lockfile entries, no settings modifications.
+For quick one-off testing without any persistent side effects, developers can use the host's plugin directory CLI flag (if supported). This loads the plugin for a single session only — no symlinks, no lockfile entries, no settings modifications. Consult the host's documentation for the specific flag name.
 
 ---
 
 # Host Integration
 
-ccpkg installs packages as Claude Code plugins, leveraging the host's plugin runtime for component registration and namespace isolation.
+ccpkg integrates with each host's extension or plugin system, leveraging the host's runtime for component registration and namespace isolation. The specific integration mechanism is defined in each host's [adoption specification](assistant-adoption.md).
 
 ## Bootstrap
 
-On first use, ccpkg registers itself as a plugin marketplace by adding an entry to the host's `settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "ccpkg": {
-      "source": {
-        "source": "directory",
-        "path": "~/.ccpkg/plugins"
-      }
-    }
-  }
-}
-```
-
-The `directory` source type tells Claude Code to discover plugins by scanning `~/.ccpkg/plugins/`. Each subdirectory containing a `.claude-plugin/plugin.json` is treated as a plugin.
+On first use, ccpkg registers itself with the host's extension discovery system. The bootstrap process varies by host — some use marketplace registration, others use directory scanning or plugin manifests. The exact mechanism is defined in the host's adoption specification under `plugin_model`.
 
 ## Plugin Registration
 
-During installation, the installer performs two host-facing steps:
+During installation, the installer performs two host-facing steps as defined by the host's adoption specification:
 
-1. **Generate `.claude-plugin/plugin.json`.** Created inside the install directory, mapping manifest fields to plugin manifest fields:
+1. **Generate host plugin manifest.** The installer creates the host's expected plugin manifest inside the install directory, mapping ccpkg manifest fields (name, version, description, author) to the host's manifest format. The manifest path and format are defined in the host's `plugin_model.manifest_path` field. Package authors SHOULD NOT include host-specific plugin manifests in their archives. If a host-specific manifest is present, the installer MUST use the generated version and MAY warn the author.
 
-   | Manifest Field | plugin.json Field |
-   |---|---|
-   | `name` | `name` |
-   | `version` | `version` |
-   | `description` | `description` |
-   | `author` | `author` |
+2. **Register with host.** The installer registers the package with the host's extension system as described in the host's `adapter_interface` operations. This ensures the host recognizes the package on the next session start.
 
-   Package authors SHOULD NOT include `.claude-plugin/` in their archives. If a `.claude-plugin/plugin.json` is present in the archive, the installer MUST use the generated version (from manifest metadata) and MAY warn the author.
-
-2. **Add to `enabledPlugins`.** The installer adds `{name}@ccpkg: true` to the `enabledPlugins` object in `settings.json`. This ensures the host recognizes the plugin as enabled.
-
-These two steps — a plugin.json file in the discovery directory and an enabledPlugins entry — are the complete integration surface. No other host APIs or internal files need to be modified.
+These two steps — generating a plugin manifest and registering with the host — are the complete integration surface. The specific files and settings keys are defined in each host's [adoption specification](assistant-adoption.md).
 
 ## Namespacing
 
-The host's plugin system provides namespacing automatically. The manifest `name` maps to the plugin.json `name`, which becomes the namespace prefix. All components are exposed as `{package-name}:{component-name}`, with component names derived from directory names (skills, agents) or file names (commands). No file editing or frontmatter rewriting is required.
+The host's plugin system provides namespacing automatically. The manifest `name` becomes the namespace prefix. All components are exposed as `{package-name}:{component-name}`, with component names derived from directory names (skills, agents) or file names (commands). No file editing or frontmatter rewriting is required.
 
 For example, a package named `api-testing` containing `skills/run-suite/` exposes the skill as `/api-testing:run-suite`.
 
-> **Note:** User-level skills (`~/.claude/skills/`) and commands (`~/.claude/commands/`) cannot be namespaced because the host flattens subdirectories. This is why ccpkg installs packages as plugins.
+> **Note:** Some hosts flatten user-level component directories, preventing namespace isolation. This is why ccpkg installs packages through the host's plugin system rather than directly into user-level component directories.
 
 ## Scope and Settings
 
-Each installation scope maps to a different host settings location:
+Each installation scope maps to a different host settings location. The specific paths vary by host and are defined in the host's [adoption specification](assistant-adoption.md) under `configuration.settings_paths`.
 
-| Scope | Settings Location | Plugin Directory | Behavior |
-|---|---|---|---|
-| **User** | `~/.claude/settings.json` | `~/.ccpkg/plugins/` | Available in all sessions |
-| **Project** | `{project}/.claude/settings.json` | `{project}/.ccpkg/plugins/` | Available in project sessions; settings committed to git |
-| **Managed** | Enterprise/org managed settings | N/A | Read-only; admins can allowlist ccpkg via `strictKnownMarketplaces` |
+| Scope | Plugin Directory | Behavior |
+|---|---|---|
+| **User** | `~/.ccpkg/plugins/` | Available in all sessions |
+| **Project** | `{project}/.ccpkg/plugins/` | Available in project sessions; settings committed to git |
+| **Managed** | Per host adoption spec | Read-only; admins can allowlist ccpkg via host-specific managed settings |
 
-Project-scoped settings are committed to version control. When a team member opens a project with ccpkg plugins declared in `.claude/settings.json`, the host prompts them to install the referenced plugins.
+Project-scoped settings are committed to version control. When a team member opens a project with ccpkg plugins declared in the host's settings file, the host prompts them to install the referenced plugins.
 
 Settings precedence follows the host's resolution order: **Managed > Local > Project > User**. A managed setting always wins; a project setting overrides user-level for the duration of that project session.

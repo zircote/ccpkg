@@ -108,3 +108,13 @@ stateDiagram-v2
     Registered --> Removed: User uninstalls
     Removed --> [*]
 ```
+
+---
+
+## Relationship to Assistant Adoption Specifications
+
+The ccpkg specification is structured as a layered system. This core specification defines the universal packaging format — archive structure, manifest schema, component types, install lifecycle, and security model. It is intentionally tool-agnostic: no host-specific filenames, settings paths, or plugin registration mechanisms appear in the core spec.
+
+Host-specific integration details are captured in **assistant adoption specifications**, one per AI coding assistant. Each adoption spec declares how ccpkg maps to a particular host's conventions: instruction filenames, hook event names, plugin registration steps, settings paths, and component support levels. Adoption specs are machine-validated against the [Assistant Adoption Specification Schema](schemas/assistant-adoption.schema.json) and published alongside this specification in the `spec/assistants/` directory.
+
+The [Assistant Adoption Specification](assistant-adoption.md) defines the normative contract for what an adoption spec MUST contain. Installers use adoption specs at install time to perform host-specific adapter operations (generating plugin manifests, registering with the host, translating hook events). Package authors consult adoption specs to understand which components each host supports and how to structure portable packages.

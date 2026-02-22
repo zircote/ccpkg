@@ -10,7 +10,8 @@
         "Status",
         "Introduction",
         "Design Principles",
-        "Architecture"
+        "Architecture",
+        "Relationship to Assistant Adoption Specifications"
       ],
       "keepPreamble": true
     },
