@@ -1,0 +1,40 @@
+---
+title: "Assistants"
+description: "AI coding assistant adoption specifications for ccpkg cross-tool portability."
+---
+
+# Assistant Adoption Specifications
+
+ccpkg achieves cross-tool portability through a three-layer specification system:
+
+1. **Core Specification** — Defines the universal packaging format, manifest schema, component types, and lifecycle operations. Tool-agnostic by design.
+
+2. **[Adoption Meta-Specification](/specification/overview#relationship-to-assistant-adoption-specifications)** — Defines the contract for what an adoption spec must contain: identity fields, component support levels, hook event mappings, MCP integration details, and adapter operations.
+
+3. **Individual Adoption Specs** — One JSON file per assistant, declaring exactly how that assistant integrates with ccpkg. Machine-validated against a JSON Schema.
+
+## Reading an Adoption Spec
+
+Each assistant page below documents:
+
+- **Component Support** — Which ccpkg component types the assistant supports natively, via adapter, experimentally, or not at all.
+- **Instructions** — The filename and format the assistant uses for instruction injection.
+- **Hook Events** — How ccpkg canonical event names map to the assistant's native hook events, plus any host-specific events.
+- **MCP Integration** — Transport support, credential prefix, and configuration locations.
+- **Component Paths** — Where each component type is installed at user and project scope.
+- **Extension Model** — How the assistant discovers and loads extensions (bundle vs scatter).
+- **Roadmap** — Planned or in-progress changes to the assistant's ccpkg support.
+
+## Contributing
+
+To add support for a new assistant, create a JSON file in `spec/assistants/` following the [adoption specification format](/specification/overview#relationship-to-assistant-adoption-specifications). See the [Contributing Guide](https://github.com/zircote/ccpkg/blob/main/CONTRIBUTING.md) for details.
+
+## Supported Assistants
+
+| Assistant | Vendor | Instructions File | Hook Events | MCP |
+|---|---|---|---|---|
+| [Claude Code](/assistants/claude-code) | Anthropic | `CLAUDE.md` | 7 canonical + 10 host-specific | Native |
+| [Copilot CLI](/assistants/copilot-cli) | GitHub | `.github/copilot-instructions.md` | 6 canonical | Native |
+| [Codex CLI](/assistants/codex-cli) | OpenAI | `AGENTS.md` | 1 canonical + 1 host-specific | Native |
+| [Gemini CLI](/assistants/gemini-cli) | Google | `GEMINI.md` | 6 canonical + 5 host-specific | Native |
+| [OpenCode](/assistants/opencode) | sst | `AGENTS.md` | 4 canonical + 9 host-specific | Native |
