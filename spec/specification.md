@@ -342,7 +342,7 @@ Each key is a host identifier matching an [adoption specification](assistant-ado
 
 ```json
 {
-  "spec_version": "2026-02-14",
+  "spec_version": "2026-02-22",
   "name": "api-testing",
   "version": "1.0.0",
   "description": "Skills and tools for API testing workflows, including OpenAPI validation, request generation, and mock server management.",
