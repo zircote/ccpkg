@@ -1,6 +1,6 @@
 # ccpkg
 
-[![Spec Version](https://img.shields.io/badge/spec-2026--02--14-blue?style=flat-square)](https://ccpkg.dev/spec/specification.html)
+[![Spec Version](https://img.shields.io/badge/spec-2026--02--22-blue?style=flat-square)](https://ccpkg.dev/spec/specification.html)
 [![Status](https://img.shields.io/badge/status-draft-orange?style=flat-square)](#status)
 [![License: CC-BY-4.0](https://img.shields.io/badge/license-CC--BY--4.0-green?style=flat-square)](https://creativecommons.org/licenses/by/4.0/)
 [![Docs](https://img.shields.io/badge/docs-ccpkg.dev-818cf8?style=flat-square)](https://ccpkg.dev)
@@ -112,7 +112,7 @@ example-plugin-1.0.0.ccpkg (ZIP)
 
 ## Status
 
-This specification is a **draft** (version 2026-02-14). The format is stable enough for experimentation and feedback but may change before 1.0.
+This specification is a **draft** (version 2026-02-22). The format is stable enough for experimentation and feedback but may change before 1.0.
 
 ## Contributing
 
