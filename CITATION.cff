@@ -1,0 +1,71 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: ccpkg
+abstract: >-
+  An open packaging format for AI coding assistant extensions.
+  ccpkg is a self-contained archive format for packaging and distributing
+  skills, agents, commands, hooks, MCP servers, and LSP servers as a single
+  portable unit.
+version: 0.0.4
+date-released: "2026-02-22"
+license: CC-BY-4.0
+url: "https://ccpkg.dev"
+repository-code: "https://github.com/zircote/ccpkg"
+authors:
+  - family-names: Allen
+    given-names: Robert
+    email: zircote@gmail.com
+    orcid: "https://orcid.org/0009-0007-9691-004X"
+identifiers:
+  - type: url
+    value: "https://github.com/zircote/ccpkg"
+    description: GitHub repository
+keywords:
+  - ai-coding-assistants
+  - packaging-format
+  - extensions
+  - mcp
+  - lsp
+  - agent-skills
+  - claude-code
+  - portable-archives
+preferred-citation:
+  type: software
+  title: ccpkg
+  abstract: >-
+    An open packaging format for AI coding assistant extensions.
+  version: 0.0.4
+  date-released: "2026-02-22"
+  license: CC-BY-4.0
+  url: "https://ccpkg.dev"
+  repository-code: "https://github.com/zircote/ccpkg"
+  authors:
+    - family-names: Allen
+      given-names: Robert
+      email: zircote@gmail.com
+      orcid: "https://orcid.org/0009-0007-9691-004X"
+references:
+  - type: software
+    title: Model Context Protocol Specification
+    url: "https://modelcontextprotocol.io/"
+    repository-code: "https://github.com/modelcontextprotocol/specification"
+    abstract: >-
+      The Model Context Protocol (MCP) defines how AI applications communicate
+      with external tools and data sources. ccpkg uses MCP for server
+      configuration templating.
+  - type: software
+    title: Language Server Protocol
+    url: "https://microsoft.github.io/language-server-protocol/"
+    repository-code: "https://github.com/microsoft/language-server-protocol"
+    abstract: >-
+      The Language Server Protocol (LSP) defines a standard for language
+      intelligence features. ccpkg uses LSP for server configuration
+      templating.
+  - type: software
+    title: Agent Skills
+    url: "https://agentskills.io/"
+    abstract: >-
+      The Agent Skills format defines a standard for packaging AI agent
+      capabilities as SKILL.md files. ccpkg adopts this format for its
+      skills component type.
