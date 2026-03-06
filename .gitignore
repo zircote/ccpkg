@@ -9,3 +9,4 @@ Gemfile.lock
 *.ccpkg
 dist/
 .astro/
+.fastembed_cache/
