@@ -136,6 +136,10 @@
     "type": "scatter"
   },
   "configuration": {
+    "config_dir": {
+      "default": "~/.config/opencode",
+      "env_override": null
+    },
     "settings_paths": {
       "user": "~/.config/opencode/opencode.jsonc",
       "project": "opencode.jsonc"

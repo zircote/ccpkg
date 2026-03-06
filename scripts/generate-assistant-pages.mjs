@@ -177,6 +177,17 @@ function generatePage(spec) {
       parts.push(`| ${scope} | \`${path}\` |`);
     }
     parts.push("");
+
+    if (spec.configuration.config_dir) {
+      parts.push("### Config Directory");
+      parts.push("");
+      parts.push("| Property | Value |");
+      parts.push("|---|---|");
+      parts.push(`| Default | \`${spec.configuration.config_dir.default}\` |`);
+      const env = spec.configuration.config_dir.env_override;
+      parts.push(`| Env Override | ${env ? `\`${env}\`` : "None"} |`);
+      parts.push("");
+    }
   }
 
   // --- Capabilities (optional) ---

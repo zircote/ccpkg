@@ -106,6 +106,10 @@
     }
   },
   "configuration": {
+    "config_dir": {
+      "default": "~/.copilot",
+      "env_override": null
+    },
     "settings_paths": {
       "user": "~/.copilot/settings.json",
       "project": ".github/copilot-settings.json"

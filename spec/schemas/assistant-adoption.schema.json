@@ -88,6 +88,22 @@
       }
     },
 
+    "configDir": {
+      "type": "object",
+      "required": ["default"],
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "type": "string",
+          "description": "Default filesystem path for the user-scope configuration directory."
+        },
+        "env_override": {
+          "type": ["string", "null"],
+          "description": "Environment variable that overrides the default path at runtime."
+        }
+      }
+    },
+
     "configEntry": {
       "type": "object",
       "required": ["file", "format"],
@@ -555,6 +571,10 @@
       "description": "Describes the assistant's configuration file locations.",
       "additionalProperties": false,
       "properties": {
+        "config_dir": {
+          "$ref": "#/$defs/configDir",
+          "description": "User-scope config directory and optional env var override."
+        },
         "settings_paths": {
           "type": "object",
           "description": "Paths to settings files at different scopes.",

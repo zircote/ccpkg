@@ -525,6 +525,48 @@ Installers MAY use these paths to inject managed configuration entries (e.g., en
 }
 ```
 
+### Config Directory Override
+
+The `config_dir` object declares the assistant's user-scope configuration directory and an optional environment variable that overrides it at runtime. This object is OPTIONAL within `configuration`.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `default` | `string` | REQUIRED | Default filesystem path for the user-scope configuration directory (e.g., `~/.claude`). |
+| `env_override` | `string` or `null` | OPTIONAL | Environment variable name that, when set and non-empty, overrides the `default` path at runtime (e.g., `CLAUDE_CONFIG_DIR`). A value of `null` indicates no override is available. |
+
+**Prefix substitution rule.** When `config_dir` is present and an env override is set, installers MUST perform prefix substitution on user-scope paths:
+
+- Match `config_dir.default` followed by `/` or end-of-string.
+- Replace the matched prefix with the value of the environment variable.
+- Paths that do not start with `config_dir.default` are unaffected.
+
+This means `~/.claude/settings.json` matches (prefix `~/.claude` followed by `/`), but `~/.claude.json` does NOT match (prefix `~/.claude` followed by `.`, not `/` or end-of-string).
+
+**Scope.** Prefix substitution applies to user-scope paths in `component_paths`, `instructions.paths`, `extension_model`, and `configuration.settings_paths`.
+
+Installers MUST only perform substitution when the environment variable is set AND non-empty.
+
+**Validation rule.** When `config_dir` is present, `config_dir.default` SHOULD appear as a prefix in at least one user-scope path elsewhere in the adoption spec.
+
+**Example:**
+
+```json
+{
+  "configuration": {
+    "config_dir": {
+      "default": "~/.claude",
+      "env_override": "CLAUDE_CONFIG_DIR"
+    },
+    "settings_paths": {
+      "user": "~/.claude/settings.json",
+      "project": ".claude/settings.json"
+    }
+  }
+}
+```
+
+With `CLAUDE_CONFIG_DIR=/opt/claude`, the installer resolves the user settings path to `/opt/claude/settings.json`. The project path `.claude/settings.json` is unaffected because it does not start with `~/.claude`.
+
 ### Capabilities
 
 The `capabilities` object declares optional feature flags that describe host behaviors relevant to package installation and lifecycle. This object is OPTIONAL.

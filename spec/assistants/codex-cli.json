@@ -89,6 +89,10 @@
     "type": "scatter"
   },
   "configuration": {
+    "config_dir": {
+      "default": "~/.codex",
+      "env_override": null
+    },
     "settings_paths": {
       "user": "~/.codex/config.toml",
       "project": "codex.toml"

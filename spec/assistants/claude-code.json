@@ -157,6 +157,10 @@
     }
   },
   "configuration": {
+    "config_dir": {
+      "default": "~/.claude",
+      "env_override": "CLAUDE_CONFIG_DIR"
+    },
     "settings_paths": {
       "user": "~/.claude/settings.json",
       "project": ".claude/settings.json",

@@ -134,6 +134,10 @@
     }
   },
   "configuration": {
+    "config_dir": {
+      "default": "~/.gemini",
+      "env_override": null
+    },
     "settings_paths": {
       "user": "~/.gemini/settings.json",
       "project": ".gemini/settings.json"

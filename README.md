@@ -122,6 +122,39 @@ Feedback and contributions are welcome:
 - [Submit a pull request](https://github.com/zircote/ccpkg/pulls) for spec improvements or corrections
 - Join the discussion in [GitHub Discussions](https://github.com/zircote/ccpkg/discussions)
 
+## Citing This Project
+
+If you reference ccpkg in academic or technical writing, please cite it using
+GitHub's **"Cite this repository"** button or the BibTeX entry below
+(generated from [`CITATION.cff`](CITATION.cff)):
+
+```bibtex
+@software{allen_ccpkg_2026,
+  author       = {Allen, Robert},
+  title        = {ccpkg},
+  version      = {0.0.4},
+  date         = {2026-02-22},
+  url          = {https://ccpkg.dev},
+  license      = {CC-BY-4.0}
+}
+```
+
+## Acknowledgments
+
+ccpkg builds on the following open standards:
+
+> Model Context Protocol.
+> *Model Context Protocol Specification.*
+> <https://modelcontextprotocol.io/>
+
+> Microsoft.
+> *Language Server Protocol.*
+> <https://microsoft.github.io/language-server-protocol/>
+
+> Agent Skills.
+> *Agent Skills Format.*
+> <https://agentskills.io/>
+
 ## License
 
 This specification is published under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
