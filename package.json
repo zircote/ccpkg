@@ -11,7 +11,7 @@
     "generate:assistants": "node scripts/generate-assistant-pages.mjs"
   },
   "dependencies": {
-    "astro": "^6.1.8",
+    "astro": "^6.1.9",
     "@astrojs/starlight": "^0.38.3",
     "astro-mermaid": "^2.0.1"
   }
